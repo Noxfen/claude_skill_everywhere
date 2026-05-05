@@ -49,31 +49,27 @@ if (Test-Path (Join-Path $gitRoot "Cargo.toml")) {
 if (-not $testCmd) { exit 0 }
 if (-not (Get-Command $testCmd -ErrorAction SilentlyContinue)) { exit 0 }
 
-# Run tests with timeout
-$job = Start-Job -ScriptBlock {
-    param($cmd, $args, $dir)
-    Set-Location $dir
-    & $cmd @args 2>&1
-} -ArgumentList $testCmd, $testArgs, $gitRoot
+# Run tests with 60s timeout -- use Process to capture stdout+stderr correctly in PS5.1
+$psi = [System.Diagnostics.ProcessStartInfo]::new()
+$psi.FileName = $testCmd
+$psi.Arguments = $testArgs -join " "
+$psi.WorkingDirectory = $gitRoot
+$psi.RedirectStandardOutput = $true
+$psi.RedirectStandardError = $true
+$psi.UseShellExecute = $false
+$psi.CreateNoWindow = $true
 
-$completed = Wait-Job $job -Timeout 60
-if (-not $completed) {
-    Stop-Job $job
-    Remove-Job $job
-    exit 0
-}
+$proc = [System.Diagnostics.Process]::Start($psi)
+$stdout = $proc.StandardOutput.ReadToEnd()
+$stderr = $proc.StandardError.ReadToEnd()
+$finished = $proc.WaitForExit(60000)
+if (-not $finished) { $proc.Kill(); exit 0 }
+$exitCode = $proc.ExitCode
 
-$output = Receive-Job $job
-Remove-Job $job
-$exitCode = $job.ChildJobs[0].JobStateInfo.Reason ? 1 : 0
-
-# Check if tests actually failed
-$failed = ($output -join "`n") -match "FAILED|error\[|test result: FAILED|failures:|ERROR"
-
-if ($failed) {
+if ($exitCode -ne 0) {
     Write-Output "Tests failed after your changes. Fix the failures:"
     Write-Output ""
-    Write-Output ($output -join "`n")
+    Write-Output "$stdout`n$stderr".Trim()
     exit 2
 }
 
