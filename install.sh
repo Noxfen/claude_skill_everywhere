@@ -173,6 +173,29 @@ else
   fi
 fi
 
+# --- Install recommended plugins ---
+if [ -n "$SOURCES_FILE" ]; then
+  echo ""
+  echo "Installing recommended plugins..."
+  if [ "$JSON_TOOL" = "jq" ]; then
+    while IFS=$'\t' read -r name marketplace; do
+      echo "[+] Installing $name@$marketplace..."
+      claude plugin install "$name@$marketplace" 2>/dev/null || true
+    done < <(jq -r '.recommended_plugins[] | [.name, .marketplace] | @tsv' "$SOURCES_FILE")
+  else
+    python3 - "$SOURCES_FILE" <<'PYEOF'
+import json, sys, subprocess
+with open(sys.argv[1]) as f:
+    sources = json.load(f)
+for p in sources.get("recommended_plugins", []):
+    name, mkt = p["name"], p["marketplace"]
+    print(f"[+] Installing {name}@{mkt}...")
+    subprocess.run(["claude", "plugin", "install", f"{name}@{mkt}"],
+                   capture_output=True)
+PYEOF
+  fi
+fi
+
 echo ""
 echo "Done!"
 echo ""

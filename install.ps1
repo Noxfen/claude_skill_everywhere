@@ -151,11 +151,20 @@ try {
     Write-Host "[!] Hook installer failed: $_" -ForegroundColor Yellow
 }
 
+# Install recommended plugins
+if ($sourcesJson -and $sourcesJson.recommended_plugins) {
+    Write-Host ""
+    Write-Host "Installing recommended plugins..." -ForegroundColor Cyan
+    foreach ($p in $sourcesJson.recommended_plugins) {
+        $pluginId = "$($p.name)@$($p.marketplace)"
+        Write-Host "[+] Installing $pluginId..." -ForegroundColor Green
+        try {
+            & claude plugin install $pluginId 2>$null
+        } catch { }
+    }
+}
+
 Write-Host ""
 Write-Host "Done!" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Next steps in Claude Code:" -ForegroundColor White
-Write-Host "  /plugin discover                          -> browse available plugins" -ForegroundColor Gray
-Write-Host "  /plugin install noxfen-essentials@noxfen  -> install skills" -ForegroundColor Gray
 Write-Host ""
 Write-Host "To sync after updating sources.json, re-run this installer." -ForegroundColor Gray
