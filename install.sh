@@ -147,6 +147,19 @@ PYEOF
   fi
 fi
 
+# --- Install hooks ---
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/hooks/install.sh" ]; then
+  bash "$SCRIPT_DIR/hooks/install.sh" $([ "$FORCE" = "1" ] && echo "--force")
+else
+  TMP_HOOK=$(mktemp)
+  if curl -sL "$RAW_BASE/hooks/install.sh" -o "$TMP_HOOK"; then
+    bash "$TMP_HOOK" $([ "$FORCE" = "1" ] && echo "--force")
+    rm -f "$TMP_HOOK"
+  else
+    echo "[!] Could not fetch hooks/install.sh — skipping hooks"
+  fi
+fi
+
 echo ""
 echo "Done!"
 echo ""

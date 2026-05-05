@@ -4,7 +4,26 @@
     {
       "name": "caveman",
       "repo": "JuliusBrussee/caveman",
-      "description": "Caveman ultra-compressed communication mode for Claude Code"
+      "description": "Caveman ultra-compressed communication mode"
+    },
+    {
+      "name": "claude-plugins-official",
+      "repo": "anthropics/claude-plugins-official",
+      "description": "Official Anthropic plugin marketplace"
+    }
+  ],
+  "reference_repos": [
+    {
+      "repo": "hesreallyhim/awesome-claude-code",
+      "description": "Curated list of skills, hooks, slash-commands, agent orchestrators"
+    },
+    {
+      "repo": "VoltAgent/awesome-claude-code-subagents",
+      "description": "100+ specialized Claude Code subagents"
+    },
+    {
+      "repo": "wshobson/agents",
+      "description": "Multi-agent orchestration patterns for Claude Code"
     }
   ]
 }

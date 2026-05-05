@@ -93,11 +93,25 @@ if ($sourcesJson -and $sourcesJson.external_marketplaces) {
 
 # --- Write settings.json back ---
 $json | ConvertTo-Json -Depth 10 | Set-Content $Settings -Encoding utf8
+# --- Install hooks ---
+$HooksInstaller = Join-Path $ClaudeDir "hooks-temp-installer.ps1"
+try {
+    if ($ScriptDir -and (Test-Path (Join-Path $ScriptDir "hooks\install.ps1"))) {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptDir "hooks\install.ps1") $(if ($Force) { "-Force" })
+    } else {
+        Invoke-WebRequest "$RawBase/hooks/install.ps1" -OutFile $HooksInstaller
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $HooksInstaller $(if ($Force) { "-Force" })
+        Remove-Item $HooksInstaller -Force -ErrorAction SilentlyContinue
+    }
+} catch {
+    Write-Host "[!] Hook installer failed: $_" -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host "Done!" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Next steps in Claude Code:" -ForegroundColor White
-Write-Host "  /plugin discover               -> browse available plugins" -ForegroundColor Gray
+Write-Host "  /plugin discover                          -> browse available plugins" -ForegroundColor Gray
 Write-Host "  /plugin install noxfen-essentials@noxfen  -> install skills" -ForegroundColor Gray
 Write-Host ""
 Write-Host "To sync after updating sources.json, re-run this installer." -ForegroundColor Gray
