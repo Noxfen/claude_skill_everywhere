@@ -92,6 +92,33 @@ if ($sourcesJson -and $sourcesJson.external_marketplaces) {
 $jsonText = $json | ConvertTo-Json -Depth 10
 [System.IO.File]::WriteAllText($Settings, $jsonText, (New-Object System.Text.UTF8Encoding $false))
 
+# Clone/update marketplace repo + register in known_marketplaces.json
+$PluginsDir    = Join-Path $ClaudeDir "plugins"
+$MarketDir     = Join-Path $PluginsDir "marketplaces\$MarketKey"
+$KnownMarkets  = Join-Path $PluginsDir "known_marketplaces.json"
+
+if (-not (Test-Path $MarketDir)) {
+    Write-Host "[+] Cloning marketplace repo..." -ForegroundColor Green
+    & git clone "https://github.com/$RepoOwner/$RepoName.git" $MarketDir 2>$null
+} else {
+    Write-Host "[=] Updating marketplace repo..." -ForegroundColor Yellow
+    & git -C $MarketDir pull --ff-only --quiet 2>$null
+}
+
+if (Test-Path $KnownMarkets) {
+    $km = Get-Content $KnownMarkets -Raw | ConvertFrom-Json
+    if (-not ($km.PSObject.Properties.Name -contains $MarketKey) -or $Force) {
+        $km | Add-Member -NotePropertyName $MarketKey -NotePropertyValue ([PSCustomObject]@{
+            source          = [PSCustomObject]@{ source = "github"; repo = "$RepoOwner/$RepoName" }
+            installLocation = $MarketDir.Replace('\', '\\')
+            lastUpdated     = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ")
+        }) -Force
+        $kmText = $km | ConvertTo-Json -Depth 10
+        [System.IO.File]::WriteAllText($KnownMarkets, $kmText, (New-Object System.Text.UTF8Encoding $false))
+        Write-Host "[+] Registered in known_marketplaces.json" -ForegroundColor Green
+    }
+}
+
 # Install hooks
 $localHooksInstaller = if ($ScriptDir) { Join-Path $ScriptDir "hooks\install.ps1" } else { $null }
 
