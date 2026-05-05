@@ -15,11 +15,15 @@ fi
 transcript=$(echo "$json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null)
 [ -z "$transcript" ] || [ ! -f "$transcript" ] && exit 0
 
-if ! grep -q '"name":\s*"\(Write\|Edit\)"' "$transcript" 2>/dev/null; then
+# Find Write/Edit only after the last user message (current turn only)
+last_user_line=$(grep -n '"type":"user"' "$transcript" 2>/dev/null | tail -1 | cut -d: -f1)
+last_user_line=${last_user_line:-0}
+if ! tail -n +"$((last_user_line + 1))" "$transcript" | grep -q '"name":\s*"\(Write\|Edit\)"' 2>/dev/null; then
   exit 0
 fi
 
-git_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+workdir=$(echo "$json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('cwd',''))" 2>/dev/null)
+git_root=$(git -C "${workdir:-.}" rev-parse --show-toplevel 2>/dev/null) || exit 0
 
 docs=()
 [ -f "$git_root/CLAUDE.md" ] && docs+=("CLAUDE.md")
