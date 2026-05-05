@@ -61,6 +61,17 @@ case "$ext" in
   c|h|cpp|hpp|cc|cxx)
     run_if_available clang-format -i "$file"
     ;;
+  sh|bash)
+    if command -v shellcheck >/dev/null 2>&1; then
+      out=$(shellcheck -S warning "$file" 2>&1) || true
+      if [ -n "$out" ]; then
+        echo "[lint] shellcheck $file:"
+        echo "$out"
+      else
+        echo "[lint] shellcheck OK: $file"
+      fi
+    fi
+    ;;
 esac
 
 exit 0

@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "noxfen-essentials",
-      "description": "Best-practice skills for Rust, Python, JS/TS, C, plus orchestrator, plan-execute, and debug skills.",
+      "description": "Best-practice skills for Rust, Python, JS/TS, C, Bash, PowerShell, plus orchestrator, plan-execute, and debug skills.",
       "author": {
         "name": "Noxfen"
       },

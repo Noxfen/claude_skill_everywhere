@@ -62,6 +62,31 @@ switch ($ext) {
     { $_ -in @("c","h","cpp","hpp","cc","cxx") } {
         Run-Format "clang-format" @("-i", $file)
     }
+    { $_ -in @("ps1","psm1","psd1") } {
+        try {
+            Import-Module PSScriptAnalyzer -ErrorAction Stop
+            $results = Invoke-ScriptAnalyzer -Path $file -Severity @("Warning","Error") -ErrorAction Stop
+            if ($results) {
+                Write-Output "[lint] PSScriptAnalyzer $file :"
+                $results | ForEach-Object { Write-Output "  [$($_.Severity)] $($_.RuleName) L$($_.Line): $($_.Message)" }
+            } else {
+                Write-Output "[lint] PSScriptAnalyzer OK: $file"
+            }
+        } catch {
+            # PSScriptAnalyzer not installed -- silent
+        }
+    }
+    { $_ -in @("sh","bash") } {
+        if (Has-Command "shellcheck") {
+            $out = & shellcheck -S warning $file 2>&1
+            if ($out) {
+                Write-Output "[lint] shellcheck $file :"
+                $out | ForEach-Object { Write-Output "  $_" }
+            } else {
+                Write-Output "[lint] shellcheck OK: $file"
+            }
+        }
+    }
 }
 
 exit 0
