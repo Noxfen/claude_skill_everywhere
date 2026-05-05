@@ -88,8 +88,9 @@ if ($sourcesJson -and $sourcesJson.external_marketplaces) {
     }
 }
 
-# Write settings.json back
-$json | ConvertTo-Json -Depth 10 | Set-Content $Settings -Encoding utf8
+# Write settings.json back (UTF-8 without BOM -- PS5.1 Set-Content adds BOM, bypass with WriteAllText)
+$jsonText = $json | ConvertTo-Json -Depth 10
+[System.IO.File]::WriteAllText($Settings, $jsonText, (New-Object System.Text.UTF8Encoding $false))
 
 # Install hooks
 $localHooksInstaller = if ($ScriptDir) { Join-Path $ScriptDir "hooks\install.ps1" } else { $null }

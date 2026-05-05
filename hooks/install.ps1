@@ -73,6 +73,7 @@ Add-Hook "Stop"         $docsCmd
 Add-Hook "SessionStart" $syncCmd
 Add-Hook "PostToolUse"  $lintCmd
 
-$json | ConvertTo-Json -Depth 10 | Set-Content $Settings -Encoding utf8
+$jsonText = $json | ConvertTo-Json -Depth 10
+[System.IO.File]::WriteAllText($Settings, $jsonText, (New-Object System.Text.UTF8Encoding $false))
 Write-Host ""
 Write-Host "Hooks installed. Restart Claude Code to activate." -ForegroundColor Cyan
