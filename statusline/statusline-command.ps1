@@ -39,14 +39,17 @@ function Format-Segment([string]$label, [double]$pct, [long]$resetsAt, [bool]$we
     return "$seg$reset"
 }
 
-$rl = $data.rate_limits
-$pct5 = $rl?.five_hour?.used_percentage
+$rl   = $data.rate_limits
+$fh   = $rl.five_hour
+$sd   = $rl.seven_day
+
+$pct5 = $fh.used_percentage
 if ($null -eq $pct5) { exit 0 }
 
-$seg5 = Format-Segment "5h" $pct5 ($rl.five_hour?.resets_at ?? 0)
+$seg5 = Format-Segment "5h" $pct5 ([long]($fh.resets_at ?? 0))
 
-$pctW = $rl?.seven_day?.used_percentage
-$segW = $null -ne $pctW ? (Format-Segment "7d" $pctW ($rl.seven_day?.resets_at ?? 0) $true) : $null
+$pctW = $sd.used_percentage
+$segW = $null -ne $pctW ? (Format-Segment "7d" $pctW ([long]($sd.resets_at ?? 0)) $true) : $null
 
 # Context estimate block
 $segCtx = $null
@@ -66,4 +69,5 @@ if (Test-Path $EstimateFile) {
 }
 
 $parts = @($seg5) + @($segW | Where-Object { $_ }) + @($segCtx | Where-Object { $_ })
-Write-Host -NoNewline ($parts -join "  ${dim}|${reset}  ")
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::Write($parts -join "  ${dim}|${reset}  ")
