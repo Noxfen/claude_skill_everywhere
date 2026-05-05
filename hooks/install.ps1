@@ -38,6 +38,7 @@ function Get-HookFile($name) {
 
 Get-HookFile "update-docs-reminder.ps1"
 Get-HookFile "auto-sync.ps1"
+Get-HookFile "lint-on-edit.ps1"
 
 # --- Patch settings.json ---
 $json = Get-Content $Settings -Raw | ConvertFrom-Json
@@ -68,9 +69,11 @@ function Add-Hook($eventName, $command) {
 
 $docsCmd  = "powershell.exe -NoProfile -File `"$HooksDir\update-docs-reminder.ps1`""
 $syncCmd  = "powershell.exe -NoProfile -File `"$HooksDir\auto-sync.ps1`""
+$lintCmd  = "powershell.exe -NoProfile -File `"$HooksDir\lint-on-edit.ps1`""
 
 Add-Hook "Stop"         $docsCmd
 Add-Hook "SessionStart" $syncCmd
+Add-Hook "PostToolUse"  $lintCmd
 
 $json | ConvertTo-Json -Depth 10 | Set-Content $Settings -Encoding utf8
 Write-Host ""

@@ -43,6 +43,7 @@ get_hook_file() {
 
 get_hook_file "update-docs-reminder.sh"
 get_hook_file "auto-sync.sh"
+get_hook_file "lint-on-edit.sh"
 
 # Patch settings.json using python3
 python3 - "$SETTINGS" "$HOOKS_DIR" "$FORCE" <<'PYEOF'
@@ -70,9 +71,11 @@ def add_hook(event, command):
 
 docs_cmd = f'bash "{hooks_dir}/update-docs-reminder.sh"'
 sync_cmd = f'bash "{hooks_dir}/auto-sync.sh"'
+lint_cmd = f'bash "{hooks_dir}/lint-on-edit.sh"'
 
 add_hook("Stop", docs_cmd)
 add_hook("SessionStart", sync_cmd)
+add_hook("PostToolUse", lint_cmd)
 
 with open(settings_file, "w") as f:
     json.dump(data, f, indent=2)
