@@ -147,6 +147,19 @@ PYEOF
   fi
 fi
 
+# --- Install MCP servers ---
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/mcp/install.sh" ]; then
+  bash "$SCRIPT_DIR/mcp/install.sh" || echo "[!] MCP installer failed"
+else
+  TMP_MCP=$(mktemp)
+  if curl -sL "$RAW_BASE/mcp/install.sh" -o "$TMP_MCP"; then
+    bash "$TMP_MCP" || echo "[!] MCP installer failed"
+    rm -f "$TMP_MCP"
+  else
+    echo "[!] Could not fetch mcp/install.sh -- skipping MCP servers"
+  fi
+fi
+
 # --- Install hooks ---
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/hooks/install.sh" ]; then
   bash "$SCRIPT_DIR/hooks/install.sh" $([ "$FORCE" = "1" ] && echo "--force")

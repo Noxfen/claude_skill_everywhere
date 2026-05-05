@@ -119,6 +119,21 @@ if (Test-Path $KnownMarkets) {
     }
 }
 
+# Install MCP servers
+$localMcpInstaller = if ($ScriptDir) { Join-Path $ScriptDir "mcp\install.ps1" } else { $null }
+try {
+    if ($localMcpInstaller -and (Test-Path $localMcpInstaller)) {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $localMcpInstaller
+    } else {
+        $tmp = Join-Path $env:TEMP "noxfen-mcp-install.ps1"
+        Invoke-WebRequest "$RawBase/mcp/install.ps1" -OutFile $tmp
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tmp
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+    }
+} catch {
+    Write-Host "[!] MCP installer failed: $_" -ForegroundColor Yellow
+}
+
 # Install hooks
 $localHooksInstaller = if ($ScriptDir) { Join-Path $ScriptDir "hooks\install.ps1" } else { $null }
 
