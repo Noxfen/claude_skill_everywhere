@@ -91,6 +91,19 @@ if (Test-Path $KnownMarkets) {
     }
 }
 
+# Install statusline
+$statuslineInstaller = $PSScriptRoot ? (Join-Path $PSScriptRoot "statusline\install.ps1") : $null
+try {
+    if ($statuslineInstaller -and (Test-Path $statuslineInstaller)) {
+        pwsh -NoProfile -File $statuslineInstaller
+    } else {
+        $tmp = Join-Path $env:TEMP "noxfen-statusline-install.ps1"
+        Invoke-WebRequest "$RawBase/statusline/install.ps1" -OutFile $tmp
+        pwsh -NoProfile -File $tmp
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+    }
+} catch { Write-Host "[!] Statusline installer failed: $_" -ForegroundColor Yellow }
+
 # Install MCP servers
 $mcpInstaller = $PSScriptRoot ? (Join-Path $PSScriptRoot "mcp\install.ps1") : $null
 try {

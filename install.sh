@@ -147,6 +147,19 @@ PYEOF
   fi
 fi
 
+# --- Install statusline ---
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/statusline/install.sh" ]; then
+  bash "$SCRIPT_DIR/statusline/install.sh" || echo "[!] Statusline installer failed"
+else
+  TMP_SL=$(mktemp)
+  if curl -sL "$RAW_BASE/statusline/install.sh" -o "$TMP_SL"; then
+    bash "$TMP_SL" || echo "[!] Statusline installer failed"
+    rm -f "$TMP_SL"
+  else
+    echo "[!] Could not fetch statusline/install.sh -- skipping statusline"
+  fi
+fi
+
 # --- Install MCP servers ---
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/mcp/install.sh" ]; then
   bash "$SCRIPT_DIR/mcp/install.sh" || echo "[!] MCP installer failed"

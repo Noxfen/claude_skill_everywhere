@@ -135,6 +135,10 @@ plugins/
   noxfen-essentials/        <- main plugin
     .claude-plugin/
       plugin.json
+statusline/
+  statusline-command.ps1    <- rate limit bars for Windows (PS7)
+  statusline-command.sh     <- rate limit bars for Linux/WSL
+  install.ps1 / .sh         <- deploys script + patches settings.json
     skills/                 <- SKILL.md files
       rust-best-practices/
       python-best-practices/
