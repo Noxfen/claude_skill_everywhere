@@ -1,0 +1,8 @@
+{
+  "name": "noxfen-essentials",
+  "description": "Noxfen's personal Claude Code skills, commands, and hooks",
+  "author": {
+    "name": "Noxfen",
+    "email": "david.giustini@tt-group.it"
+  }
+}

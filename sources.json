@@ -1,0 +1,10 @@
+{
+  "comment": "List external Claude Code marketplace repos to install alongside this one. Add entries here, commit+push, then re-run install script on each machine to sync.",
+  "external_marketplaces": [
+    {
+      "name": "caveman",
+      "repo": "JuliusBrussee/caveman",
+      "description": "Caveman ultra-compressed communication mode for Claude Code"
+    }
+  ]
+}
