@@ -29,10 +29,22 @@ $Servers = @(
     @{ name = "github";     cmd = "npx"; args = @("-y", "@modelcontextprotocol/server-github") }
 )
 
+$claudeJson = Join-Path $env:USERPROFILE ".claude.json"
+$existingMcp = @()
+if (Test-Path $claudeJson) {
+    try {
+        $existingMcp = (Get-Content $claudeJson -Raw | ConvertFrom-Json).mcpServers.PSObject.Properties.Name
+    } catch { }
+}
+
 foreach ($s in $Servers) {
     $argsStr = $s.args -join " "
-    $result = & claude mcp add --scope user $s.name -- $s.cmd @($s.args) 2>&1
-    Write-Host "[+] $($s.name): $($s.cmd) $argsStr" -ForegroundColor Green
+    if ($existingMcp -contains $s.name) {
+        Write-Host "[=] Already configured: $($s.name)" -ForegroundColor Yellow
+    } else {
+        & claude mcp add --scope user $s.name -- $s.cmd @($s.args) 2>$null
+        Write-Host "[+] $($s.name): $($s.cmd) $argsStr" -ForegroundColor Green
+    }
 }
 
 Write-Host ""
