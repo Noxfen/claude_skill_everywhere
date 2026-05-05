@@ -1,5 +1,6 @@
-# claude_skill_everywhere — hook installer (Windows/PowerShell)
-# Registers update-docs-reminder (Stop) and auto-sync (SessionStart) into settings.json
+# claude_skill_everywhere -- hook installer (Windows/PowerShell)
+# Registers update-docs-reminder (Stop), auto-sync (SessionStart),
+# lint-on-edit (PostToolUse) into settings.json
 #
 # Usage (remote):
 #   irm https://raw.githubusercontent.com/Noxfen/claude_skill_everywhere/main/hooks/install.ps1 | iex
@@ -23,7 +24,6 @@ if (-not (Test-Path $Settings)) {
 
 New-Item -ItemType Directory -Force -Path $HooksDir | Out-Null
 
-# --- Download hook scripts ---
 $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { $null }
 
 function Get-HookFile($name) {
@@ -40,10 +40,8 @@ Get-HookFile "update-docs-reminder.ps1"
 Get-HookFile "auto-sync.ps1"
 Get-HookFile "lint-on-edit.ps1"
 
-# --- Patch settings.json ---
 $json = Get-Content $Settings -Raw | ConvertFrom-Json
 
-# Ensure hooks object exists
 if (-not ($json.PSObject.Properties.Name -contains "hooks")) {
     $json | Add-Member -NotePropertyName "hooks" -NotePropertyValue ([PSCustomObject]@{})
 }
@@ -67,9 +65,9 @@ function Add-Hook($eventName, $command) {
     }
 }
 
-$docsCmd  = "powershell.exe -NoProfile -File `"$HooksDir\update-docs-reminder.ps1`""
-$syncCmd  = "powershell.exe -NoProfile -File `"$HooksDir\auto-sync.ps1`""
-$lintCmd  = "powershell.exe -NoProfile -File `"$HooksDir\lint-on-edit.ps1`""
+$docsCmd = "powershell.exe -NoProfile -File `"$HooksDir\update-docs-reminder.ps1`""
+$syncCmd = "powershell.exe -NoProfile -File `"$HooksDir\auto-sync.ps1`""
+$lintCmd = "powershell.exe -NoProfile -File `"$HooksDir\lint-on-edit.ps1`""
 
 Add-Hook "Stop"         $docsCmd
 Add-Hook "SessionStart" $syncCmd

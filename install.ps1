@@ -1,4 +1,4 @@
-# claude_skill_everywhere — Windows/PowerShell installer
+# claude_skill_everywhere -- Windows/PowerShell installer
 # Registers this marketplace + all external marketplaces from sources.json
 # into ~/.claude/settings.json
 #
@@ -26,7 +26,7 @@ Write-Host "claude_skill_everywhere installer" -ForegroundColor Cyan
 Write-Host "===================================" -ForegroundColor Cyan
 Write-Host ""
 
-# --- Load settings.json ---
+# Load settings.json
 if (-not (Test-Path $Settings)) {
     Write-Host "ERROR: $Settings not found. Is Claude Code installed?" -ForegroundColor Red
     exit 1
@@ -39,7 +39,7 @@ if (-not ($json.PSObject.Properties.Name -contains "extraKnownMarketplaces")) {
     $json | Add-Member -NotePropertyName "extraKnownMarketplaces" -NotePropertyValue ([PSCustomObject]@{})
 }
 
-# --- Register this repo as a marketplace ---
+# Register this repo as a marketplace
 $thisSource = [PSCustomObject]@{
     source = [PSCustomObject]@{
         source = "github"
@@ -54,10 +54,8 @@ if (-not ($json.extraKnownMarketplaces.PSObject.Properties.Name -contains $Marke
     Write-Host "[=] Marketplace already registered: $MarketKey" -ForegroundColor Yellow
 }
 
-# --- Load sources.json and register external marketplaces ---
+# Load sources.json and register external marketplaces
 $sourcesJson = $null
-
-# Try local file first (if running from a clone)
 $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { $null }
 $localSources = if ($ScriptDir) { Join-Path $ScriptDir "sources.json" } else { $null }
 
@@ -65,16 +63,15 @@ if ($localSources -and (Test-Path $localSources)) {
     $sourcesJson = Get-Content $localSources -Raw | ConvertFrom-Json
 } else {
     try {
-        $raw = Invoke-RestMethod "$RawBase/sources.json"
-        $sourcesJson = $raw
+        $sourcesJson = Invoke-RestMethod "$RawBase/sources.json"
     } catch {
-        Write-Host "[!] Could not fetch sources.json — skipping external marketplaces" -ForegroundColor Yellow
+        Write-Host "[!] Could not fetch sources.json -- skipping external marketplaces" -ForegroundColor Yellow
     }
 }
 
 if ($sourcesJson -and $sourcesJson.external_marketplaces) {
     foreach ($ext in $sourcesJson.external_marketplaces) {
-        $extKey = $ext.name
+        $extKey  = $ext.name
         $extRepo = $ext.repo
         if (-not ($json.extraKnownMarketplaces.PSObject.Properties.Name -contains $extKey) -or $Force) {
             $extSource = [PSCustomObject]@{
@@ -91,17 +88,21 @@ if ($sourcesJson -and $sourcesJson.external_marketplaces) {
     }
 }
 
-# --- Write settings.json back ---
+# Write settings.json back
 $json | ConvertTo-Json -Depth 10 | Set-Content $Settings -Encoding utf8
-# --- Install hooks ---
-$HooksInstaller = Join-Path $ClaudeDir "hooks-temp-installer.ps1"
+
+# Install hooks
+$localHooksInstaller = if ($ScriptDir) { Join-Path $ScriptDir "hooks\install.ps1" } else { $null }
+
 try {
-    if ($ScriptDir -and (Test-Path (Join-Path $ScriptDir "hooks\install.ps1"))) {
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ScriptDir "hooks\install.ps1") $(if ($Force) { "-Force" })
+    if ($localHooksInstaller -and (Test-Path $localHooksInstaller)) {
+        $forceArg = if ($Force) { @("-Force") } else { @() }
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $localHooksInstaller @forceArg
     } else {
-        Invoke-WebRequest "$RawBase/hooks/install.ps1" -OutFile $HooksInstaller
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $HooksInstaller $(if ($Force) { "-Force" })
-        Remove-Item $HooksInstaller -Force -ErrorAction SilentlyContinue
+        $tmp = Join-Path $env:TEMP "noxfen-hooks-install.ps1"
+        Invoke-WebRequest "$RawBase/hooks/install.ps1" -OutFile $tmp
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tmp
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
     }
 } catch {
     Write-Host "[!] Hook installer failed: $_" -ForegroundColor Yellow
