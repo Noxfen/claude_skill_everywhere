@@ -45,15 +45,16 @@ switch ($ext) {
     }
     { $_ -in @("c","h","cpp","hpp","cc","cxx") } { Run-Format "clang-format" @("-i", $file) }
     { $_ -in @("ps1","psm1","psd1") } {
-        if (Has-Command "pwsh") {
-            $results = pwsh -NoProfile -Command "Import-Module PSScriptAnalyzer -EA Stop; Invoke-ScriptAnalyzer -Path '$file' -Severity Warning,Error | ForEach-Object { `"  [`$(`$_.Severity)] `$(`$_.RuleName) L`$(`$_.Line): `$(`$_.Message)`" }" 2>$null
+        try {
+            Import-Module PSScriptAnalyzer -ErrorAction Stop
+            $results = Invoke-ScriptAnalyzer -Path $file -Severity @("Warning","Error") -ErrorAction Stop
             if ($results) {
                 Write-Output "[lint] PSScriptAnalyzer $file :"
-                $results | Write-Output
+                $results | ForEach-Object { Write-Output "  [$($_.Severity)] $($_.RuleName) L$($_.Line): $($_.Message)" }
             } else {
                 Write-Output "[lint] PSScriptAnalyzer OK: $file"
             }
-        }
+        } catch { }
     }
     { $_ -in @("sh","bash") } {
         if (Has-Command "shellcheck") {
