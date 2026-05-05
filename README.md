@@ -18,7 +18,8 @@ bash <(curl -sL https://raw.githubusercontent.com/Noxfen/claude_skill_everywhere
 The installer does:
 1. Registers `noxfen` marketplace + external marketplaces from `sources.json`
 2. Installs MCP servers: `filesystem`, `git`, `fetch`, `github`
-3. Installs hooks: `lint-on-edit` (PostToolUse), `auto-sync` (SessionStart), `update-docs-reminder` (Stop)
+3. Installs hooks: `lint-on-edit`, `track-context` (PostToolUse) · `update-docs-reminder`, `run-tests-on-stop`, `compact-warning` (Stop) · `auto-sync` (SessionStart)
+4. Installs statusline script (rate-limit bars + context estimate)
 
 After installing, restart Claude Code, then:
 ```
@@ -93,8 +94,11 @@ Install in Claude Code after running the installer:
 | Hook | Event | What it does |
 |------|-------|-------------|
 | `lint-on-edit` | PostToolUse | Auto-formats/lints after every Write/Edit: `rustfmt`, `ruff`, `prettier`, `clang-format`, `shellcheck`, `PSScriptAnalyzer` |
+| `track-context` | PostToolUse | Estimates context window usage from transcript; writes `~/.claude/context-estimate.json` for the statusline |
 | `auto-sync` | SessionStart | `git pull` this repo at session start — keeps skills/hooks updated |
-| `update-docs-reminder` | Stop | Reminds Claude to update `CLAUDE.md`/`README.md` after file edits |
+| `update-docs-reminder` | Stop | Reminds Claude to update `CLAUDE.md`/`README.md` if files were edited this turn |
+| `run-tests-on-stop` | Stop | Detects project type (Cargo/pytest/npm/make), runs tests after edits, injects failures so Claude self-corrects |
+| `compact-warning` | Stop | Warns Claude to run `/compact` when context estimate exceeds 80% |
 
 ### MCP servers (user scope)
 
@@ -150,10 +154,13 @@ statusline/
       plan-execute/
       debug/
 hooks/
-  lint-on-edit.ps1 / .sh   <- PostToolUse: auto-format on Write/Edit
-  update-docs-reminder.ps1 / .sh  <- Stop: remind to update docs
-  auto-sync.ps1 / .sh      <- SessionStart: git pull this repo
-  install.ps1 / .sh        <- registers hooks into settings.json
+  lint-on-edit.ps1 / .sh          <- PostToolUse: auto-format on Write/Edit
+  track-context.ps1 / .sh         <- PostToolUse: context window estimation
+  update-docs-reminder.ps1 / .sh  <- Stop: remind to update docs (current turn only)
+  run-tests-on-stop.ps1 / .sh     <- Stop: run test suite; inject failures
+  compact-warning.ps1 / .sh       <- Stop: warn when context >80%
+  auto-sync.ps1 / .sh             <- SessionStart: git pull this repo
+  install.ps1 / .sh               <- registers hooks into settings.json
 mcp/
   install.ps1 / .sh        <- installs MCP servers
   README.md
