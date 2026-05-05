@@ -1,32 +1,26 @@
-# claude_skill_everywhere -- Windows/PowerShell installer
-# Registers this marketplace + all external marketplaces from sources.json
-# into ~/.claude/settings.json
+#Requires -Version 7.0
+# claude_skill_everywhere -- installer (PowerShell 7+)
+# Registers marketplace, clones repo, installs MCP servers, hooks, and recommended plugins.
 #
-# Usage (remote):
-#   irm https://raw.githubusercontent.com/Noxfen/claude_skill_everywhere/main/install.ps1 | iex
-# Usage (local clone):
-#   powershell -ExecutionPolicy Bypass -File install.ps1
+# Usage (remote):  irm https://raw.githubusercontent.com/Noxfen/claude_skill_everywhere/main/install.ps1 | iex
+# Usage (local):   pwsh -File install.ps1 [-Force]
 
-param(
-    [switch]$Force
-)
-
+param([switch]$Force)
 $ErrorActionPreference = "Stop"
 
-$RepoOwner  = "Noxfen"
-$RepoName   = "claude_skill_everywhere"
-$MarketKey  = "noxfen"
-$RawBase    = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/main"
+$RepoOwner = "Noxfen"
+$RepoName  = "claude_skill_everywhere"
+$MarketKey = "noxfen"
+$RawBase   = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/main"
 
-$ClaudeDir  = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $env:USERPROFILE ".claude" }
-$Settings   = Join-Path $ClaudeDir "settings.json"
+$ClaudeDir = $env:CLAUDE_CONFIG_DIR ?? (Join-Path $env:USERPROFILE ".claude")
+$Settings  = Join-Path $ClaudeDir "settings.json"
 
 Write-Host ""
 Write-Host "claude_skill_everywhere installer" -ForegroundColor Cyan
 Write-Host "===================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Load settings.json
 if (-not (Test-Path $Settings)) {
     Write-Host "ERROR: $Settings not found. Is Claude Code installed?" -ForegroundColor Red
     exit 1
@@ -34,19 +28,10 @@ if (-not (Test-Path $Settings)) {
 
 $json = Get-Content $Settings -Raw | ConvertFrom-Json
 
-# Ensure extraKnownMarketplaces exists
-if (-not ($json.PSObject.Properties.Name -contains "extraKnownMarketplaces")) {
-    $json | Add-Member -NotePropertyName "extraKnownMarketplaces" -NotePropertyValue ([PSCustomObject]@{})
-}
+$json.extraKnownMarketplaces ??= [PSCustomObject]@{}
 
-# Register this repo as a marketplace
-$thisSource = [PSCustomObject]@{
-    source = [PSCustomObject]@{
-        source = "github"
-        repo   = "$RepoOwner/$RepoName"
-    }
-}
-
+# Register this repo as marketplace
+$thisSource = [PSCustomObject]@{ source = [PSCustomObject]@{ source = "github"; repo = "$RepoOwner/$RepoName" } }
 if (-not ($json.extraKnownMarketplaces.PSObject.Properties.Name -contains $MarketKey) -or $Force) {
     $json.extraKnownMarketplaces | Add-Member -NotePropertyName $MarketKey -NotePropertyValue $thisSource -Force
     Write-Host "[+] Registered marketplace: $MarketKey ($RepoOwner/$RepoName)" -ForegroundColor Green
@@ -54,55 +39,43 @@ if (-not ($json.extraKnownMarketplaces.PSObject.Properties.Name -contains $Marke
     Write-Host "[=] Marketplace already registered: $MarketKey" -ForegroundColor Yellow
 }
 
-# Load sources.json and register external marketplaces
+# Load sources.json
 $sourcesJson = $null
-$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { $null }
-$localSources = if ($ScriptDir) { Join-Path $ScriptDir "sources.json" } else { $null }
-
+$localSources = $PSScriptRoot ? (Join-Path $PSScriptRoot "sources.json") : $null
 if ($localSources -and (Test-Path $localSources)) {
     $sourcesJson = Get-Content $localSources -Raw | ConvertFrom-Json
 } else {
-    try {
-        $sourcesJson = Invoke-RestMethod "$RawBase/sources.json"
-    } catch {
-        Write-Host "[!] Could not fetch sources.json -- skipping external marketplaces" -ForegroundColor Yellow
-    }
+    try { $sourcesJson = Invoke-RestMethod "$RawBase/sources.json" }
+    catch { Write-Host "[!] Could not fetch sources.json -- skipping external marketplaces" -ForegroundColor Yellow }
 }
 
-if ($sourcesJson -and $sourcesJson.external_marketplaces) {
+# Register external marketplaces
+if ($sourcesJson?.external_marketplaces) {
     foreach ($ext in $sourcesJson.external_marketplaces) {
-        $extKey  = $ext.name
-        $extRepo = $ext.repo
-        if (-not ($json.extraKnownMarketplaces.PSObject.Properties.Name -contains $extKey) -or $Force) {
-            $extSource = [PSCustomObject]@{
-                source = [PSCustomObject]@{
-                    source = "github"
-                    repo   = $extRepo
-                }
-            }
-            $json.extraKnownMarketplaces | Add-Member -NotePropertyName $extKey -NotePropertyValue $extSource -Force
-            Write-Host "[+] Registered external marketplace: $extKey ($extRepo)" -ForegroundColor Green
+        $extSource = [PSCustomObject]@{ source = [PSCustomObject]@{ source = "github"; repo = $ext.repo } }
+        if (-not ($json.extraKnownMarketplaces.PSObject.Properties.Name -contains $ext.name) -or $Force) {
+            $json.extraKnownMarketplaces | Add-Member -NotePropertyName $ext.name -NotePropertyValue $extSource -Force
+            Write-Host "[+] Registered external marketplace: $($ext.name) ($($ext.repo))" -ForegroundColor Green
         } else {
-            Write-Host "[=] Already registered: $extKey" -ForegroundColor Yellow
+            Write-Host "[=] Already registered: $($ext.name)" -ForegroundColor Yellow
         }
     }
 }
 
-# Write settings.json back (UTF-8 without BOM -- PS5.1 Set-Content adds BOM, bypass with WriteAllText)
-$jsonText = $json | ConvertTo-Json -Depth 10
-[System.IO.File]::WriteAllText($Settings, $jsonText, (New-Object System.Text.UTF8Encoding $false))
+# Write settings.json (PS7 Set-Content uses UTF-8 without BOM by default)
+$json | ConvertTo-Json -Depth 10 | Set-Content $Settings -Encoding utf8
 
 # Clone/update marketplace repo + register in known_marketplaces.json
-$PluginsDir    = Join-Path $ClaudeDir "plugins"
-$MarketDir     = Join-Path $PluginsDir "marketplaces\$MarketKey"
-$KnownMarkets  = Join-Path $PluginsDir "known_marketplaces.json"
+$PluginsDir   = Join-Path $ClaudeDir "plugins"
+$MarketDir    = Join-Path $PluginsDir "marketplaces\Noxfen-claude_skill_everywhere"
+$KnownMarkets = Join-Path $PluginsDir "known_marketplaces.json"
 
 if (-not (Test-Path $MarketDir)) {
     Write-Host "[+] Cloning marketplace repo..." -ForegroundColor Green
-    & git clone "https://github.com/$RepoOwner/$RepoName.git" $MarketDir 2>$null
+    git clone "https://github.com/$RepoOwner/$RepoName.git" $MarketDir 2>$null
 } else {
     Write-Host "[=] Updating marketplace repo..." -ForegroundColor Yellow
-    & git -C $MarketDir pull --ff-only --quiet 2>$null
+    git -C $MarketDir pull --ff-only --quiet 2>$null
 }
 
 if (Test-Path $KnownMarkets) {
@@ -110,57 +83,49 @@ if (Test-Path $KnownMarkets) {
     if (-not ($km.PSObject.Properties.Name -contains $MarketKey) -or $Force) {
         $km | Add-Member -NotePropertyName $MarketKey -NotePropertyValue ([PSCustomObject]@{
             source          = [PSCustomObject]@{ source = "github"; repo = "$RepoOwner/$RepoName" }
-            installLocation = $MarketDir.Replace('\', '\\')
+            installLocation = $MarketDir
             lastUpdated     = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ")
         }) -Force
-        $kmText = $km | ConvertTo-Json -Depth 10
-        [System.IO.File]::WriteAllText($KnownMarkets, $kmText, (New-Object System.Text.UTF8Encoding $false))
+        $km | ConvertTo-Json -Depth 10 | Set-Content $KnownMarkets -Encoding utf8
         Write-Host "[+] Registered in known_marketplaces.json" -ForegroundColor Green
     }
 }
 
 # Install MCP servers
-$localMcpInstaller = if ($ScriptDir) { Join-Path $ScriptDir "mcp\install.ps1" } else { $null }
+$mcpInstaller = $PSScriptRoot ? (Join-Path $PSScriptRoot "mcp\install.ps1") : $null
 try {
-    if ($localMcpInstaller -and (Test-Path $localMcpInstaller)) {
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $localMcpInstaller
+    if ($mcpInstaller -and (Test-Path $mcpInstaller)) {
+        pwsh -NoProfile -File $mcpInstaller
     } else {
         $tmp = Join-Path $env:TEMP "noxfen-mcp-install.ps1"
         Invoke-WebRequest "$RawBase/mcp/install.ps1" -OutFile $tmp
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tmp
+        pwsh -NoProfile -File $tmp
         Remove-Item $tmp -Force -ErrorAction SilentlyContinue
     }
-} catch {
-    Write-Host "[!] MCP installer failed: $_" -ForegroundColor Yellow
-}
+} catch { Write-Host "[!] MCP installer failed: $_" -ForegroundColor Yellow }
 
 # Install hooks
-$localHooksInstaller = if ($ScriptDir) { Join-Path $ScriptDir "hooks\install.ps1" } else { $null }
-
+$hooksInstaller = $PSScriptRoot ? (Join-Path $PSScriptRoot "hooks\install.ps1") : $null
 try {
-    if ($localHooksInstaller -and (Test-Path $localHooksInstaller)) {
-        $forceArg = if ($Force) { @("-Force") } else { @() }
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $localHooksInstaller @forceArg
+    if ($hooksInstaller -and (Test-Path $hooksInstaller)) {
+        $forceArg = $Force ? @("-Force") : @()
+        pwsh -NoProfile -File $hooksInstaller @forceArg
     } else {
         $tmp = Join-Path $env:TEMP "noxfen-hooks-install.ps1"
         Invoke-WebRequest "$RawBase/hooks/install.ps1" -OutFile $tmp
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tmp
+        pwsh -NoProfile -File $tmp
         Remove-Item $tmp -Force -ErrorAction SilentlyContinue
     }
-} catch {
-    Write-Host "[!] Hook installer failed: $_" -ForegroundColor Yellow
-}
+} catch { Write-Host "[!] Hook installer failed: $_" -ForegroundColor Yellow }
 
 # Install recommended plugins
-if ($sourcesJson -and $sourcesJson.recommended_plugins) {
+if ($sourcesJson?.recommended_plugins) {
     Write-Host ""
     Write-Host "Installing recommended plugins..." -ForegroundColor Cyan
     foreach ($p in $sourcesJson.recommended_plugins) {
         $pluginId = "$($p.name)@$($p.marketplace)"
         Write-Host "[+] Installing $pluginId..." -ForegroundColor Green
-        try {
-            & claude plugin install $pluginId 2>$null
-        } catch { }
+        claude plugin install $pluginId 2>$null
     }
 }
 

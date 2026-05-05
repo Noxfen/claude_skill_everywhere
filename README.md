@@ -34,6 +34,7 @@ After installing, restart Claude Code, then:
 | Tool | Min | Required for | Install |
 |------|-----|-------------|---------|
 | Claude Code | latest | everything | `winget install Anthropic.ClaudeCode` |
+| **PowerShell 7** | **7.0+** | **all hook scripts (required)** | **`winget install Microsoft.PowerShell`** |
 | Git | 2.x | installer, auto-sync hook | `winget install Git.Git` |
 | Node.js | 18+ | MCP servers (filesystem, github, fetch) | `winget install OpenJS.NodeJS` |
 | Python | 3.10+ | uv + Python-based MCP servers | `winget install Python.Python.3.11` |
