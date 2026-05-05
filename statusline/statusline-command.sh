@@ -64,10 +64,37 @@ seg5=$(format_segment "5h" "$pct5" "$resets5" 0)
 pctW=$(echo "$input" | jq -r '.rate_limits.weekly.used_percentage // empty' 2>/dev/null || \
        echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty' 2>/dev/null)
 
+segW=""
 if [ -n "$pctW" ]; then
   resetsW=$(echo "$input" | jq -r '.rate_limits.weekly.resets_at // .rate_limits.seven_day.resets_at // 0')
   segW=$(format_segment "7d" "$pctW" "$resetsW" 1)
-  printf "%s  %s|%s  %s" "$seg5" "$DIM" "$RESET" "$segW"
-else
-  printf "%s" "$seg5"
 fi
+
+# Context estimate block
+segCtx=""
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+ESTIMATE_FILE="$CLAUDE_DIR/context-estimate.json"
+if [ -f "$ESTIMATE_FILE" ]; then
+  segCtx=$(python3 - "$ESTIMATE_FILE" <<'PYEOF'
+import json, sys, time
+with open(sys.argv[1]) as f:
+    est = json.load(f)
+age = time.time() - est.get("updated_at", 0)
+pct = est.get("pct", 0)
+if age > 300 or pct <= 0:
+    sys.exit(0)
+pct_int = round(pct)
+filled = min(pct_int // 10, 10)
+bar = "\xe2\x96\x88" * filled + "\xe2\x96\x91" * (10 - filled)
+color = "\033[31m" if pct_int >= 80 else ("\033[33m" if pct_int >= 50 else "\033[32m")
+print(f"{color}ctx [{bar}] {pct_int}%~\033[0m", end="")
+PYEOF
+  )
+fi
+
+# --- output ---
+sep="${DIM}|${RESET}"
+out="$seg5"
+[ -n "$segW"   ] && out="$out  $sep  $segW"
+[ -n "$segCtx" ] && out="$out  $sep  $segCtx"
+printf "%s" "$out"

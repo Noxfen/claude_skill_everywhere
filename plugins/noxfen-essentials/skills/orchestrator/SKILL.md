@@ -87,6 +87,32 @@ After all agents complete:
 3. Apply any necessary integration fixes in the main context
 4. Report total: files changed, tokens used (approximate)
 
+## Context efficiency (critical for long sessions)
+
+Main context is the scarcest resource. Every byte the orchestrator adds persists for the entire session.
+
+**When prompting each subagent, always end with:**
+```
+Report in max 200 words: what changed, what issues found, what to do next.
+No reasoning chain. No code blocks unless the exact code is the answer.
+```
+
+**When collecting results:**
+- Synthesize each agent result in 1-3 lines before adding to main context
+- Never copy-paste the full agent response — extract only actionable findings
+- If agent output >50 lines: summarize in 5 lines, note "full output available on request"
+- Never repeat back the prompt you gave the agent
+
+**If context estimate (from statusline `ctx %~`) approaches 70%:**
+- Reduce number of agents in next wave
+- Ask agents for even more compressed output
+- Consider running `/compact` before the next major task
+
+**Anti-patterns:**
+- Pasting full stack traces into main context (summarize: "N errors, top issue: X")
+- Repeating agent inputs in synthesis ("I asked agent 1 to do X, and it did X...")
+- Spawning agents whose combined output will exceed remaining context budget
+
 ## Anti-patterns to avoid
 
 - Spawning agents for tasks you can do in <30 seconds directly

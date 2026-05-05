@@ -36,6 +36,8 @@ function Get-HookFile([string]$name) {
 
 Get-HookFile "update-docs-reminder.ps1"
 Get-HookFile "run-tests-on-stop.ps1"
+Get-HookFile "compact-warning.ps1"
+Get-HookFile "track-context.ps1"
 Get-HookFile "auto-sync.ps1"
 Get-HookFile "lint-on-edit.ps1"
 
@@ -63,8 +65,10 @@ $pwsh = (Get-Command pwsh).Source
 
 Add-Hook "Stop"         "pwsh -NoProfile -File `"$HooksDir\update-docs-reminder.ps1`""
 Add-Hook "Stop"         "pwsh -NoProfile -File `"$HooksDir\run-tests-on-stop.ps1`""
+Add-Hook "Stop"         "pwsh -NoProfile -File `"$HooksDir\compact-warning.ps1`""
 Add-Hook "SessionStart" "pwsh -NoProfile -File `"$HooksDir\auto-sync.ps1`""
 Add-Hook "PostToolUse"  "pwsh -NoProfile -File `"$HooksDir\lint-on-edit.ps1`""
+Add-Hook "PostToolUse"  "pwsh -NoProfile -File `"$HooksDir\track-context.ps1`""
 
 $json | ConvertTo-Json -Depth 10 | Set-Content $Settings -Encoding utf8
 Write-Host ""

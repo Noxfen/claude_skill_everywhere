@@ -46,9 +46,24 @@ if ($null -eq $pct5) { exit 0 }
 $seg5 = Format-Segment "5h" $pct5 ($rl.five_hour?.resets_at ?? 0)
 
 $pctW = $rl?.seven_day?.used_percentage
-if ($null -ne $pctW) {
-    $segW = Format-Segment "7d" $pctW ($rl.seven_day?.resets_at ?? 0) $true
-    Write-Host -NoNewline "${seg5}  ${dim}|${reset}  ${segW}"
-} else {
-    Write-Host -NoNewline $seg5
+$segW = $null -ne $pctW ? (Format-Segment "7d" $pctW ($rl.seven_day?.resets_at ?? 0) $true) : $null
+
+# Context estimate block
+$segCtx = $null
+$ClaudeDir    = $env:CLAUDE_CONFIG_DIR ?? (Join-Path $env:USERPROFILE ".claude")
+$EstimateFile = Join-Path $ClaudeDir "context-estimate.json"
+if (Test-Path $EstimateFile) {
+    try {
+        $est = Get-Content $EstimateFile -Raw | ConvertFrom-Json
+        $age = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - $est.updated_at
+        if ($age -le 300 -and $est.pct -gt 0) {
+            $colorCtx = Get-Color $est.pct
+            $barCtx   = Get-Bar $est.pct
+            $pctFmt   = [math]::Round($est.pct, 0)
+            $segCtx   = "${colorCtx}ctx [${barCtx}] ${pctFmt}%~${reset}"
+        }
+    } catch {}
 }
+
+$parts = @($seg5) + @($segW | Where-Object { $_ }) + @($segCtx | Where-Object { $_ })
+Write-Host -NoNewline ($parts -join "  ${dim}|${reset}  ")
