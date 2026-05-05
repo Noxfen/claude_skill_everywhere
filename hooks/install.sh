@@ -42,6 +42,7 @@ get_hook_file() {
 }
 
 get_hook_file "update-docs-reminder.sh"
+get_hook_file "run-tests-on-stop.sh"
 get_hook_file "auto-sync.sh"
 get_hook_file "lint-on-edit.sh"
 
@@ -69,11 +70,13 @@ def add_hook(event, command):
     else:
         print(f"[=] Hook already registered: {event}")
 
-docs_cmd = f'bash "{hooks_dir}/update-docs-reminder.sh"'
-sync_cmd = f'bash "{hooks_dir}/auto-sync.sh"'
-lint_cmd = f'bash "{hooks_dir}/lint-on-edit.sh"'
+docs_cmd  = f'bash "{hooks_dir}/update-docs-reminder.sh"'
+tests_cmd = f'bash "{hooks_dir}/run-tests-on-stop.sh"'
+sync_cmd  = f'bash "{hooks_dir}/auto-sync.sh"'
+lint_cmd  = f'bash "{hooks_dir}/lint-on-edit.sh"'
 
 add_hook("Stop", docs_cmd)
+add_hook("Stop", tests_cmd)
 add_hook("SessionStart", sync_cmd)
 add_hook("PostToolUse", lint_cmd)
 

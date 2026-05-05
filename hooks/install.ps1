@@ -37,6 +37,7 @@ function Get-HookFile($name) {
 }
 
 Get-HookFile "update-docs-reminder.ps1"
+Get-HookFile "run-tests-on-stop.ps1"
 Get-HookFile "auto-sync.ps1"
 Get-HookFile "lint-on-edit.ps1"
 
@@ -65,11 +66,13 @@ function Add-Hook($eventName, $command) {
     }
 }
 
-$docsCmd = "powershell.exe -NoProfile -File `"$HooksDir\update-docs-reminder.ps1`""
-$syncCmd = "powershell.exe -NoProfile -File `"$HooksDir\auto-sync.ps1`""
-$lintCmd = "powershell.exe -NoProfile -File `"$HooksDir\lint-on-edit.ps1`""
+$docsCmd  = "powershell.exe -NoProfile -File `"$HooksDir\update-docs-reminder.ps1`""
+$testsCmd = "powershell.exe -NoProfile -File `"$HooksDir\run-tests-on-stop.ps1`""
+$syncCmd  = "powershell.exe -NoProfile -File `"$HooksDir\auto-sync.ps1`""
+$lintCmd  = "powershell.exe -NoProfile -File `"$HooksDir\lint-on-edit.ps1`""
 
 Add-Hook "Stop"         $docsCmd
+Add-Hook "Stop"         $testsCmd
 Add-Hook "SessionStart" $syncCmd
 Add-Hook "PostToolUse"  $lintCmd
 
