@@ -43,9 +43,9 @@ command -v "$first_cmd" >/dev/null 2>&1 || exit 0
 output=$(cd "$git_root" && timeout 60 sh -c "$test_cmd" 2>&1) && status=0 || status=$?
 
 if [ "$status" -ne 0 ]; then
-  echo "Tests failed after your changes. Fix the failures:"
-  echo ""
-  echo "$output"
+  echo "Tests failed after your changes. Fix the failures:" >&2
+  echo "" >&2
+  echo "$output" >&2
   exit 2
 fi
 

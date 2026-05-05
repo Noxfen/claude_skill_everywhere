@@ -27,5 +27,5 @@ docs=()
 [ ${#docs[@]} -eq 0 ] && exit 0
 
 list=$(IFS=", "; echo "${docs[*]}")
-echo "Hai appena modificato dei file nel progetto. Controlla se $list va aggiornato per riflettere le modifiche fatte. Se necessario, aggiornali ora."
+echo "Hai appena modificato dei file nel progetto. Controlla se $list va aggiornato per riflettere le modifiche fatte. Se necessario, aggiornali ora." >&2
 exit 2

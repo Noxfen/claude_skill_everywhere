@@ -22,5 +22,5 @@ if ($age -gt 600) { exit 0 }
 if ($est.pct -lt $threshold) { exit 0 }
 
 $tokensK = [math]::Round($est.tokens_est / 1000)
-Write-Output "[CONTEXT WARNING] Contesto al ~$($est.pct)% (~${tokensK}k token stimati su 1M). Esegui /compact ora per comprimere la conversazione e liberare contesto."
+[Console]::Error.WriteLine("[CONTEXT WARNING] Contesto al ~$($est.pct)% (~${tokensK}k token stimati su 1M). Esegui /compact ora per comprimere la conversazione e liberare contesto.")
 exit 2

@@ -11,7 +11,8 @@ if (-not $transcriptPath -or -not (Test-Path $transcriptPath)) { exit 0 }
 $content = Get-Content $transcriptPath -Raw -ErrorAction SilentlyContinue
 if ($content -notmatch '"name":\s*"(Write|Edit)"') { exit 0 }
 
-$gitRoot = git rev-parse --show-toplevel 2>$null
+$workDir = if ($data.cwd -and (Test-Path $data.cwd)) { $data.cwd } else { Get-Location }
+$gitRoot = git -C $workDir rev-parse --show-toplevel 2>$null
 if ($LASTEXITCODE -ne 0 -or -not $gitRoot) { exit 0 }
 $gitRoot = $gitRoot.Trim()
 
@@ -21,5 +22,5 @@ $docs = @(
 
 if ($docs.Count -eq 0) { exit 0 }
 
-Write-Output "Hai appena modificato dei file nel progetto. Controlla se $($docs -join ', ') va aggiornato per riflettere le modifiche fatte. Se necessario, aggiornali ora."
+[Console]::Error.WriteLine("Hai appena modificato dei file nel progetto. Controlla se $($docs -join ', ') va aggiornato per riflettere le modifiche fatte. Se necessario, aggiornali ora.")
 exit 2

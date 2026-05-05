@@ -58,9 +58,7 @@ $finished = $proc.WaitForExit(60000)
 if (-not $finished) { $proc.Kill(); exit 0 }
 
 if ($proc.ExitCode -ne 0) {
-    Write-Output "Tests failed after your changes. Fix the failures:"
-    Write-Output ""
-    Write-Output "$stdout`n$stderr".Trim()
+    [Console]::Error.WriteLine("Tests failed after your changes. Fix the failures:`n`n$("$stdout`n$stderr".Trim())")
     exit 2
 }
 
