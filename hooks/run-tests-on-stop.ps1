@@ -24,7 +24,10 @@ if (Test-Path (Join-Path $gitRoot "Cargo.toml")) {
 } elseif ((Test-Path (Join-Path $gitRoot "pyproject.toml")) -or
           (Test-Path (Join-Path $gitRoot "pytest.ini")) -or
           (Test-Path (Join-Path $gitRoot "setup.py"))) {
-    $testCmd = "python"; $testArgs = @("-m", "pytest", "--tb=short", "-q")
+    $pyCmd = Get-Command python -ErrorAction SilentlyContinue
+    if ($pyCmd -and $pyCmd.Source -notmatch 'WindowsApps') {
+        $testCmd = "python"; $testArgs = @("-m", "pytest", "--tb=short", "-q")
+    }
 } elseif (Test-Path (Join-Path $gitRoot "package.json")) {
     $pkg = Get-Content (Join-Path $gitRoot "package.json") | ConvertFrom-Json
     $testCmd = "npm"
