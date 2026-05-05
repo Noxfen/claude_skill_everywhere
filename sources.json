@@ -1,5 +1,5 @@
 {
-  "comment": "List external Claude Code marketplace repos to install alongside this one. Add entries here, commit+push, then re-run install script on each machine to sync.",
+  "comment": "External Claude Code marketplaces + recommended plugins. Re-run install script to sync new marketplace entries.",
   "external_marketplaces": [
     {
       "name": "caveman",
@@ -10,6 +10,56 @@
       "name": "claude-plugins-official",
       "repo": "anthropics/claude-plugins-official",
       "description": "Official Anthropic plugin marketplace"
+    }
+  ],
+  "recommended_plugins": [
+    {
+      "name": "rust-analyzer-lsp",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install rust-analyzer-lsp@claude-plugins-official",
+      "description": "Rust LSP -- diagnostics, completions, go-to-definition"
+    },
+    {
+      "name": "clangd-lsp",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install clangd-lsp@claude-plugins-official",
+      "description": "C/C++ LSP -- requires clangd installed (winget install LLVM.LLVM)"
+    },
+    {
+      "name": "pyright-lsp",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install pyright-lsp@claude-plugins-official",
+      "description": "Python LSP type checking -- requires: npm install -g pyright"
+    },
+    {
+      "name": "code-review",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install code-review@claude-plugins-official",
+      "description": "Automated PR review via /code-review -- multi-agent with confidence scoring"
+    },
+    {
+      "name": "commit-commands",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install commit-commands@claude-plugins-official",
+      "description": "Git workflow: /commit, /push, /pr slash commands"
+    },
+    {
+      "name": "hookify",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install hookify@claude-plugins-official",
+      "description": "Create hooks from markdown files without editing JSON"
+    },
+    {
+      "name": "feature-dev",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install feature-dev@claude-plugins-official",
+      "description": "7-phase structured feature development workflow"
+    },
+    {
+      "name": "caveman",
+      "marketplace": "caveman",
+      "install": "/plugin install caveman@caveman",
+      "description": "Ultra-compressed communication mode (~75% token reduction)"
     }
   ],
   "reference_repos": [
