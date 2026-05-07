@@ -47,6 +47,9 @@ get_hook_file "compact-warning.sh"
 get_hook_file "track-context.sh"
 get_hook_file "auto-sync.sh"
 get_hook_file "lint-on-edit.sh"
+get_hook_file "branch-context-injector.sh"
+get_hook_file "unsafe-rust-blocker.sh"
+get_hook_file "dep-audit.sh"
 
 # Patch settings.json using python3
 python3 - "$SETTINGS" "$HOOKS_DIR" "$FORCE" <<'PYEOF'
@@ -78,6 +81,9 @@ compact_cmd = f'bash "{hooks_dir}/compact-warning.sh"'
 sync_cmd    = f'bash "{hooks_dir}/auto-sync.sh"'
 lint_cmd    = f'bash "{hooks_dir}/lint-on-edit.sh"'
 ctx_cmd     = f'bash "{hooks_dir}/track-context.sh"'
+audit_cmd   = f'bash "{hooks_dir}/dep-audit.sh"'
+unsafe_cmd  = f'bash "{hooks_dir}/unsafe-rust-blocker.sh"'
+branch_cmd  = f'bash "{hooks_dir}/branch-context-injector.sh"'
 
 add_hook("Stop", docs_cmd)
 add_hook("Stop", tests_cmd)
@@ -85,6 +91,9 @@ add_hook("Stop", compact_cmd)
 add_hook("SessionStart", sync_cmd)
 add_hook("PostToolUse", lint_cmd)
 add_hook("PostToolUse", ctx_cmd)
+add_hook("PostToolUse", audit_cmd)
+add_hook("PreToolUse", unsafe_cmd)
+add_hook("UserPromptSubmit", branch_cmd)
 
 with open(settings_file, "w") as f:
     json.dump(data, f, indent=2)

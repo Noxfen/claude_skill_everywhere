@@ -17,10 +17,13 @@ hooks/                       <- hook scripts + installers
   install.ps1 / install.sh   <- registers all hooks into ~/.claude/settings.json
   lint-on-edit.*             <- PostToolUse: auto-format on Write/Edit
   track-context.*            <- PostToolUse: estimate context window usage → context-estimate.json
+  dep-audit.*                <- PostToolUse: run cargo/npm/pip-audit on dep file changes
   update-docs-reminder.*     <- Stop: remind to update CLAUDE.md/README.md (current turn only)
   run-tests-on-stop.*        <- Stop: run test suite after file edits; inject failures
   compact-warning.*          <- Stop: warn when context estimate >80%
   auto-sync.*                <- SessionStart: git pull this repo
+  unsafe-rust-blocker.*      <- PreToolUse: block unsafe {} in .rs without // SAFETY: comment
+  branch-context-injector.*  <- UserPromptSubmit: inject git branch + dirty count into prompts
 statusline/
   statusline-command.ps1/.sh <- rate-limit + context bar for Claude Code statusline
 sources.json                 <- external marketplaces to register on install
