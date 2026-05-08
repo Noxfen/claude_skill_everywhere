@@ -50,6 +50,7 @@ get_hook_file "lint-on-edit.sh"
 get_hook_file "branch-context-injector.sh"
 get_hook_file "unsafe-rust-blocker.sh"
 get_hook_file "dep-audit.sh"
+get_hook_file "installer-sync-reminder.sh"
 
 # Patch settings.json using python3
 python3 - "$SETTINGS" "$HOOKS_DIR" "$FORCE" <<'PYEOF'
@@ -78,6 +79,7 @@ def add_hook(event, command):
 docs_cmd    = f'bash "{hooks_dir}/update-docs-reminder.sh"'
 tests_cmd   = f'bash "{hooks_dir}/run-tests-on-stop.sh"'
 compact_cmd = f'bash "{hooks_dir}/compact-warning.sh"'
+sync_reminder_cmd = f'bash "{hooks_dir}/installer-sync-reminder.sh"'
 sync_cmd    = f'bash "{hooks_dir}/auto-sync.sh"'
 lint_cmd    = f'bash "{hooks_dir}/lint-on-edit.sh"'
 ctx_cmd     = f'bash "{hooks_dir}/track-context.sh"'
@@ -88,6 +90,7 @@ branch_cmd  = f'bash "{hooks_dir}/branch-context-injector.sh"'
 add_hook("Stop", docs_cmd)
 add_hook("Stop", tests_cmd)
 add_hook("Stop", compact_cmd)
+add_hook("Stop", sync_reminder_cmd)
 add_hook("SessionStart", sync_cmd)
 add_hook("PostToolUse", lint_cmd)
 add_hook("PostToolUse", ctx_cmd)

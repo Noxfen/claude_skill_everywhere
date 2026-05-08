@@ -43,6 +43,7 @@ Get-HookFile "lint-on-edit.ps1"
 Get-HookFile "branch-context-injector.ps1"
 Get-HookFile "unsafe-rust-blocker.ps1"
 Get-HookFile "dep-audit.ps1"
+Get-HookFile "installer-sync-reminder.ps1"
 
 $json = Get-Content $Settings -Raw | ConvertFrom-Json
 $json.hooks ??= [PSCustomObject]@{}
@@ -69,6 +70,7 @@ $pwsh = (Get-Command pwsh).Source
 Add-Hook "Stop"              "pwsh -NoProfile -File `"$HooksDir\update-docs-reminder.ps1`""
 Add-Hook "Stop"              "pwsh -NoProfile -File `"$HooksDir\run-tests-on-stop.ps1`""
 Add-Hook "Stop"              "pwsh -NoProfile -File `"$HooksDir\compact-warning.ps1`""
+Add-Hook "Stop"              "pwsh -NoProfile -File `"$HooksDir\installer-sync-reminder.ps1`""
 Add-Hook "SessionStart"      "pwsh -NoProfile -File `"$HooksDir\auto-sync.ps1`""
 Add-Hook "PostToolUse"       "pwsh -NoProfile -File `"$HooksDir\lint-on-edit.ps1`""
 Add-Hook "PostToolUse"       "pwsh -NoProfile -File `"$HooksDir\track-context.ps1`""

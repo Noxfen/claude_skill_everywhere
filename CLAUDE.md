@@ -24,6 +24,7 @@ hooks/                       <- hook scripts + installers
   auto-sync.*                <- SessionStart: git pull this repo
   unsafe-rust-blocker.*      <- PreToolUse: block unsafe {} in .rs without // SAFETY: comment
   branch-context-injector.*  <- UserPromptSubmit: inject git branch + dirty count into prompts
+  installer-sync-reminder.*  <- Stop: remind to update install.* if hooks/mcp/statusline/sources.json edited
 statusline/
   statusline-command.ps1/.sh <- rate-limit + context bar for Claude Code statusline
 sources.json                 <- external marketplaces to register on install

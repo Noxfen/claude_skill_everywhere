@@ -18,7 +18,7 @@ bash <(curl -sL https://raw.githubusercontent.com/Noxfen/claude_skill_everywhere
 The installer does:
 1. Registers `noxfen` marketplace + external marketplaces from `sources.json`
 2. Installs MCP servers: `filesystem`, `git`, `fetch`, `github`
-3. Installs 9 hooks: `lint-on-edit`, `track-context`, `dep-audit` (PostToolUse) · `update-docs-reminder`, `run-tests-on-stop`, `compact-warning` (Stop) · `auto-sync` (SessionStart) · `unsafe-rust-blocker` (PreToolUse) · `branch-context-injector` (UserPromptSubmit)
+3. Installs 10 hooks: `lint-on-edit`, `track-context`, `dep-audit` (PostToolUse) · `update-docs-reminder`, `run-tests-on-stop`, `compact-warning`, `installer-sync-reminder` (Stop) · `auto-sync` (SessionStart) · `unsafe-rust-blocker` (PreToolUse) · `branch-context-injector` (UserPromptSubmit)
 4. Installs statusline script (rate-limit bars + context estimate)
 
 After installing, restart Claude Code, then:
@@ -102,6 +102,7 @@ Install in Claude Code after running the installer:
 | `compact-warning` | Stop | Warns Claude to run `/compact` when context estimate exceeds 80% |
 | `unsafe-rust-blocker` | PreToolUse | Blocks Write/Edit on `.rs` files containing `unsafe {}` without a `// SAFETY:` comment |
 | `branch-context-injector` | UserPromptSubmit | Injects `[git: branch \| N modified \| N untracked]` into every prompt for live repo state |
+| `installer-sync-reminder` | Stop | Reminds Claude to update `install.{ps1,sh}` when files in `hooks/`, `mcp/`, `statusline/`, or `sources.json` are edited this turn |
 
 ### MCP servers (user scope)
 
@@ -166,6 +167,7 @@ hooks/
   auto-sync.ps1 / .sh             <- SessionStart: git pull this repo
   unsafe-rust-blocker.ps1 / .sh   <- PreToolUse: block unsafe Rust without SAFETY comment
   branch-context-injector.ps1/.sh <- UserPromptSubmit: inject git status into prompts
+  installer-sync-reminder.ps1/.sh <- Stop: remind to update install.* on hooks/mcp/statusline/sources.json edits
   install.ps1 / .sh               <- registers hooks into settings.json
 mcp/
   install.ps1 / .sh        <- installs MCP servers
