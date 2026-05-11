@@ -83,6 +83,7 @@ Install in Claude Code after running the installer:
 | `commit-commands` | claude-plugins-official | `/plugin install commit-commands@claude-plugins-official` | `/commit`, `/push`, `/pr` commands |
 | `hookify` | claude-plugins-official | `/plugin install hookify@claude-plugins-official` | Create hooks from markdown |
 | `feature-dev` | claude-plugins-official | `/plugin install feature-dev@claude-plugins-official` | Structured 7-phase feature development |
+| `chrome-devtools-mcp` | claude-plugins-official | `/plugin install chrome-devtools-mcp@claude-plugins-official` | Chrome DevTools MCP (browser automation, perf, a11y, network) |
 | `caveman` | caveman | `/plugin install caveman@caveman` | Ultra-compressed mode (~75% token reduction) |
 
 ---

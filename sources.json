@@ -56,6 +56,12 @@
       "description": "7-phase structured feature development workflow"
     },
     {
+      "name": "chrome-devtools-mcp",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install chrome-devtools-mcp@claude-plugins-official",
+      "description": "Chrome DevTools MCP -- browser automation, performance traces, a11y, network inspection"
+    },
+    {
       "name": "caveman",
       "marketplace": "caveman",
       "install": "/plugin install caveman@caveman",
