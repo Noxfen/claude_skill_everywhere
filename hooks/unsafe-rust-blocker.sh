@@ -2,10 +2,21 @@
 # PreToolUse hook -- block unsafe Rust blocks without // SAFETY: comment.
 # Forces justification of memory-unsafe code. Exit 2 + stderr blocks the operation.
 
-python3 <<'PYEOF'
-import json, sys, re
+# Capture stdin first; heredoc would otherwise occupy python3's stdin and swallow the hook payload.
+HOOK_INPUT="$(cat)"
+export HOOK_INPUT
 
-data = json.load(sys.stdin)
+python3 <<'PYEOF'
+import json, os, sys, re
+
+raw = os.environ.get("HOOK_INPUT", "")
+if not raw.strip():
+    sys.exit(0)
+try:
+    data = json.loads(raw)
+except json.JSONDecodeError:
+    sys.exit(0)
+
 tool = data.get("tool_name", "")
 if tool not in ("Write", "Edit", "MultiEdit"):
     sys.exit(0)
