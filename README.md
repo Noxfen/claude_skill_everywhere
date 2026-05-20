@@ -84,6 +84,13 @@ Install in Claude Code after running the installer:
 | `hookify` | claude-plugins-official | `/plugin install hookify@claude-plugins-official` | Create hooks from markdown |
 | `feature-dev` | claude-plugins-official | `/plugin install feature-dev@claude-plugins-official` | Structured 7-phase feature development |
 | `chrome-devtools-mcp` | claude-plugins-official | `/plugin install chrome-devtools-mcp@claude-plugins-official` | Chrome DevTools MCP (browser automation, perf, a11y, network) |
+| `plugin-dev` | claude-plugins-official | `/plugin install plugin-dev@claude-plugins-official` | Toolkit for authoring Claude Code plugins |
+| `mcp-server-dev` | claude-plugins-official | `/plugin install mcp-server-dev@claude-plugins-official` | Design/build MCP servers |
+| `claude-md-management` | claude-plugins-official | `/plugin install claude-md-management@claude-plugins-official` | Maintain CLAUDE.md memory files |
+| `playwright` | claude-plugins-official | `/plugin install playwright@claude-plugins-official` | Playwright E2E (React/SvelteKit) |
+| `sentry` | claude-plugins-official | `/plugin install sentry@claude-plugins-official` | Sentry error monitoring |
+| `context7` | claude-plugins-official | `/plugin install context7@claude-plugins-official` | Version-specific docs lookup |
+| `github` | claude-plugins-official | `/plugin install github@claude-plugins-official` | Official GitHub MCP (PR/issue/repo) |
 | `caveman` | caveman | `/plugin install caveman@caveman` | Ultra-compressed mode (~75% token reduction) |
 
 ---
