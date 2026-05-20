@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # MCP server installer (Linux/macOS/WSL)
-# Installs: filesystem, git, fetch, github at user scope
+# Installs: filesystem, git, fetch, github, svelte at user scope
 #
 # Usage: bash mcp/install.sh
 
@@ -35,6 +35,10 @@ echo "[+] fetch"
 
 claude mcp add --scope user github -- npx -y @modelcontextprotocol/server-github
 echo "[+] github"
+
+# HTTP transport servers
+claude mcp add --scope user --transport http svelte https://mcp.svelte.dev/mcp
+echo "[+] svelte (http): https://mcp.svelte.dev/mcp"
 
 echo ""
 echo "Done. Restart Claude Code to activate MCP servers."

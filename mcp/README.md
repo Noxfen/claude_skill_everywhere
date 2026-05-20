@@ -21,6 +21,7 @@ bash mcp/install.sh
 | `git` | `uvx mcp-server-git` | Query git history, diff, blame |
 | `fetch` | `uvx mcp-server-fetch` | HTTP GET/POST for API testing |
 | `github` | `npx @modelcontextprotocol/server-github` | Issues, PRs, branches via API |
+| `svelte` | HTTP `https://mcp.svelte.dev/mcp` | Official Svelte/SvelteKit docs + Svelte 5 runes |
 
 ## GitHub MCP auth
 

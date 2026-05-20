@@ -104,10 +104,25 @@
       "description": "Official GitHub MCP -- PR/issue/repo management"
     },
     {
+      "name": "frontend-design",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install frontend-design@claude-plugins-official",
+      "description": "Production-grade UI generation -- design-system-aware frontend scaffolding"
+    },
+    {
       "name": "caveman",
       "marketplace": "caveman",
       "install": "/plugin install caveman@caveman",
       "description": "Ultra-compressed communication mode (~75% token reduction)"
+    }
+  ],
+  "mcp_servers": [
+    {
+      "name": "svelte",
+      "transport": "http",
+      "url": "https://mcp.svelte.dev/mcp",
+      "install": "claude mcp add --scope user --transport http svelte https://mcp.svelte.dev/mcp",
+      "description": "Official Svelte/SvelteKit MCP server -- Svelte 5 runes, SvelteKit data flow, docs lookup"
     }
   ],
   "reference_repos": [

@@ -1,6 +1,6 @@
 #Requires -Version 7.0
 #!/usr/bin/env pwsh
-# MCP server installer -- installs filesystem, git, fetch, github at user scope
+# MCP server installer -- installs filesystem, git, fetch, github, svelte at user scope
 #
 # Usage: pwsh -File mcp\install.ps1
 
@@ -37,6 +37,20 @@ foreach ($s in $Servers) {
     } else {
         claude mcp add --scope user $s.name -- $s.cmd @($s.args) 2>$null
         Write-Host "[+] $($s.name): $($s.cmd) $($s.args -join ' ')" -ForegroundColor Green
+    }
+}
+
+# HTTP transport servers (no local process)
+$HttpServers = @(
+    @{ name = "svelte"; url = "https://mcp.svelte.dev/mcp"; desc = "Official Svelte/SvelteKit MCP" }
+)
+
+foreach ($s in $HttpServers) {
+    if ($existingMcp -contains $s.name) {
+        Write-Host "[=] Already configured: $($s.name)" -ForegroundColor Yellow
+    } else {
+        claude mcp add --scope user --transport http $s.name $s.url 2>$null
+        Write-Host "[+] $($s.name) (http): $($s.url)" -ForegroundColor Green
     }
 }
 

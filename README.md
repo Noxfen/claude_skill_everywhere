@@ -91,6 +91,7 @@ Install in Claude Code after running the installer:
 | `sentry` | claude-plugins-official | `/plugin install sentry@claude-plugins-official` | Sentry error monitoring |
 | `context7` | claude-plugins-official | `/plugin install context7@claude-plugins-official` | Version-specific docs lookup |
 | `github` | claude-plugins-official | `/plugin install github@claude-plugins-official` | Official GitHub MCP (PR/issue/repo) |
+| `frontend-design` | claude-plugins-official | `/plugin install frontend-design@claude-plugins-official` | Production-grade UI generation (design-system aware) |
 | `caveman` | caveman | `/plugin install caveman@caveman` | Ultra-compressed mode (~75% token reduction) |
 
 ---
