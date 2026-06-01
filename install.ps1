@@ -39,18 +39,27 @@ if (-not ($json.extraKnownMarketplaces.PSObject.Properties.Name -contains $Marke
     Write-Host "[=] Marketplace already registered: $MarketKey" -ForegroundColor Yellow
 }
 
-# Load sources.json
+# Load sources.json (local copy preferred, else fetch from RawBase)
 $sourcesJson = $null
 $localSources = $PSScriptRoot ? (Join-Path $PSScriptRoot "sources.json") : $null
 if ($localSources -and (Test-Path $localSources)) {
-    $sourcesJson = Get-Content $localSources -Raw | ConvertFrom-Json
+    try { $sourcesJson = Get-Content $localSources -Raw | ConvertFrom-Json }
+    catch { Write-Host "[!] Failed to parse $localSources`: $_" -ForegroundColor Yellow }
 } else {
     try { $sourcesJson = Invoke-RestMethod "$RawBase/sources.json" }
-    catch { Write-Host "[!] Could not fetch sources.json -- skipping external marketplaces" -ForegroundColor Yellow }
+    catch { Write-Host "[!] Could not fetch sources.json -- skipping external marketplaces & plugins" -ForegroundColor Yellow }
+}
+if ($sourcesJson) {
+    Write-Host "[=] Loaded sources.json ($($sourcesJson.external_marketplaces.Count) marketplace(s), $($sourcesJson.recommended_plugins.Count) plugin(s))" -ForegroundColor DarkGray
+} else {
+    Write-Host "[!] sources.json not loaded -- external marketplaces & recommended plugins will be skipped" -ForegroundColor Yellow
 }
 
 # Register external marketplaces
-if ($sourcesJson?.external_marketplaces) {
+# NOTE: must be ($sourcesJson -and $sourcesJson.x), NOT ($sourcesJson?.x).
+# PowerShell allows '?' in variable names, so unbraced `$sourcesJson?.x` parses
+# as variable ${sourcesJson?} (nonexistent -> $null) and silently skips the block.
+if ($sourcesJson -and $sourcesJson.external_marketplaces) {
     foreach ($ext in $sourcesJson.external_marketplaces) {
         $extSource = [PSCustomObject]@{ source = [PSCustomObject]@{ source = "github"; repo = $ext.repo } }
         if (-not ($json.extraKnownMarketplaces.PSObject.Properties.Name -contains $ext.name) -or $Force) {
@@ -60,6 +69,8 @@ if ($sourcesJson?.external_marketplaces) {
             Write-Host "[=] Already registered: $($ext.name)" -ForegroundColor Yellow
         }
     }
+} else {
+    Write-Host "[=] No external marketplaces in sources.json" -ForegroundColor DarkGray
 }
 
 # Write settings.json (PS7 Set-Content uses UTF-8 without BOM by default)
@@ -132,14 +143,20 @@ try {
 } catch { Write-Host "[!] Hook installer failed: $_" -ForegroundColor Yellow }
 
 # Install recommended plugins
-if ($sourcesJson?.recommended_plugins) {
+# NOTE: ($sourcesJson -and ...), NOT ($sourcesJson?.x) -- see external marketplaces note above.
+if ($sourcesJson -and $sourcesJson.recommended_plugins) {
     Write-Host ""
     Write-Host "Installing recommended plugins..." -ForegroundColor Cyan
     foreach ($p in $sourcesJson.recommended_plugins) {
         $pluginId = "$($p.name)@$($p.marketplace)"
         Write-Host "[+] Installing $pluginId..." -ForegroundColor Green
-        claude plugin install $pluginId 2>$null
+        # try/catch so one failing install can't abort the loop under
+        # $PSNativeCommandUseErrorActionPreference + $ErrorActionPreference='Stop'.
+        try { claude plugin install $pluginId 2>$null }
+        catch { Write-Host "[!] Failed to install $pluginId`: $_" -ForegroundColor Yellow }
     }
+} else {
+    Write-Host "[=] No recommended plugins in sources.json" -ForegroundColor DarkGray
 }
 
 Write-Host ""
