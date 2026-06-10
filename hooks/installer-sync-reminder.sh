@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stop hook -- remind Claude to update install.* when files in hooks/, mcp/, statusline/, or sources.json are edited
-
-set -e
+# No `set -e`: command-substitution assignments (python3 may be missing) must
+# not abort the hook -- every failure path is handled explicitly.
 
 json=$(cat)
 
@@ -70,12 +70,12 @@ done <<< "$paths"
 [ "$needs_hooks" = 0 ] && [ "$needs_mcp" = 0 ] && [ "$needs_statusline" = 0 ] && [ "$needs_root" = 0 ] && exit 0
 
 {
-    echo "Hai modificato file impattanti per la sync cross-machine. Verifica che gli installer siano aggiornati:"
-    [ "$needs_hooks" = 1 ]      && echo "  - hooks/install.ps1 + hooks/install.sh (nuovi/rinominati hook scripts)"
-    [ "$needs_mcp" = 1 ]        && echo "  - mcp/install.ps1 + mcp/install.sh (nuovi server MCP)"
-    [ "$needs_statusline" = 1 ] && echo "  - statusline/install.ps1 + statusline/install.sh (cambiamenti statusline)"
-    [ "$needs_root" = 1 ]       && echo "  - install.ps1 + install.sh root (sources.json modificato)"
-    echo "Aggiornali se necessario per non rompere la sync."
+    echo "You modified files that affect cross-machine sync. Verify the installers are up to date:"
+    [ "$needs_hooks" = 1 ]      && echo "  - hooks/install.ps1 + hooks/install.sh (new/renamed hook scripts)"
+    [ "$needs_mcp" = 1 ]        && echo "  - mcp/install.ps1 + mcp/install.sh (new MCP servers)"
+    [ "$needs_statusline" = 1 ] && echo "  - statusline/install.ps1 + statusline/install.sh (statusline changes)"
+    [ "$needs_root" = 1 ]       && echo "  - root install.ps1 + install.sh (sources.json modified)"
+    echo "Update them if needed so the sync does not break."
 } >&2
 
 exit 2

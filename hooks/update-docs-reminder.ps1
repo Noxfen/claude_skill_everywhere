@@ -33,5 +33,5 @@ $docs = @(
 
 if ($docs.Count -eq 0) { exit 0 }
 
-[Console]::Error.WriteLine("Hai appena modificato dei file nel progetto. Controlla se $($docs -join ', ') va aggiornato per riflettere le modifiche fatte. Se necessario, aggiornali ora.")
+[Console]::Error.WriteLine("You just modified project files. Check whether $($docs -join ', ') needs updating to reflect the changes. If so, update them now.")
 exit 2

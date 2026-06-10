@@ -27,7 +27,7 @@ if est.get("pct", 0) < threshold:
     sys.exit(0)
 
 tokens_k = round(est.get("tokens_est", 0) / 1000)
-print(f"[CONTEXT WARNING] Contesto al ~{est['pct']}% (~{tokens_k}k token stimati su 1M). Esegui /compact ora per comprimere la conversazione e liberare contesto.", file=sys.stderr)
+print(f"[CONTEXT WARNING] Context at ~{est['pct']}% (~{tokens_k}k estimated tokens of 1M). Run /compact now to compress the conversation and free up context.", file=sys.stderr)
 sys.exit(2)
 PYEOF
 

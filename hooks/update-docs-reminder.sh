@@ -2,8 +2,8 @@
 # Stop hook — reminds Claude to update CLAUDE.md / README.md after file edits
 # Registered in settings.json under hooks.Stop
 # Install: bash hooks/install.sh
-
-set -e
+# No `set -e`: command-substitution assignments (python3 may be missing) must
+# not abort the hook -- every failure path is handled explicitly.
 
 json=$(cat)
 
@@ -31,5 +31,5 @@ docs=()
 [ ${#docs[@]} -eq 0 ] && exit 0
 
 list=$(IFS=", "; echo "${docs[*]}")
-echo "Hai appena modificato dei file nel progetto. Controlla se $list va aggiornato per riflettere le modifiche fatte. Se necessario, aggiornali ora." >&2
+echo "You just modified project files. Check whether $list needs updating to reflect the changes. If so, update them now." >&2
 exit 2

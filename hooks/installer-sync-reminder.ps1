@@ -57,12 +57,12 @@ foreach ($p in $paths) {
 
 if (-not ($needsHooks -or $needsMcp -or $needsStatusline -or $needsRoot)) { exit 0 }
 
-$msg = @("Hai modificato file impattanti per la sync cross-machine. Verifica che gli installer siano aggiornati:")
-if ($needsHooks)      { $msg += "  - hooks/install.ps1 + hooks/install.sh (nuovi/rinominati hook scripts)" }
-if ($needsMcp)        { $msg += "  - mcp/install.ps1 + mcp/install.sh (nuovi server MCP)" }
-if ($needsStatusline) { $msg += "  - statusline/install.ps1 + statusline/install.sh (cambiamenti statusline)" }
-if ($needsRoot)       { $msg += "  - install.ps1 + install.sh root (sources.json modificato)" }
-$msg += "Aggiornali se necessario per non rompere la sync."
+$msg = @("You modified files that affect cross-machine sync. Verify the installers are up to date:")
+if ($needsHooks)      { $msg += "  - hooks/install.ps1 + hooks/install.sh (new/renamed hook scripts)" }
+if ($needsMcp)        { $msg += "  - mcp/install.ps1 + mcp/install.sh (new MCP servers)" }
+if ($needsStatusline) { $msg += "  - statusline/install.ps1 + statusline/install.sh (statusline changes)" }
+if ($needsRoot)       { $msg += "  - root install.ps1 + install.sh (sources.json modified)" }
+$msg += "Update them if needed so the sync does not break."
 
 [Console]::Error.WriteLine(($msg -join "`n"))
 exit 2

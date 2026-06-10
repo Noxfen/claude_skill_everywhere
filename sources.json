@@ -110,6 +110,12 @@
       "description": "Production-grade UI generation -- design-system-aware frontend scaffolding"
     },
     {
+      "name": "superpowers",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install superpowers@claude-plugins-official",
+      "description": "14 methodology skills (obra/superpowers): brainstorming, TDD, systematic debugging, plan writing/execution, verification, code review, parallel agents"
+    },
+    {
       "name": "caveman",
       "marketplace": "caveman",
       "install": "/plugin install caveman@caveman",

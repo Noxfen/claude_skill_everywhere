@@ -2,8 +2,8 @@
 # PostToolUse hook — auto-format/lint file after Write or Edit
 # Detects language from extension, runs appropriate tool if available.
 # Silent on missing tools. Always exits 0 (informational only, never blocks).
-
-set -e
+# No `set -e`: command-substitution assignments (python3 may be missing) must
+# not abort the hook -- every failure path is handled explicitly.
 
 json=$(cat)
 

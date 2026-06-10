@@ -75,7 +75,7 @@ Install in Claude Code after running the installer:
 
 | Plugin | Marketplace | Command | What it does |
 |--------|------------|---------|-------------|
-| `noxfen-essentials` | noxfen | `/plugin install noxfen-essentials@noxfen` | Skills: Rust/Python/JS/C/Bash/PS best practices, orchestrator, debug |
+| `noxfen-essentials` | noxfen | `/plugin install noxfen-essentials@noxfen` | Skills: Rust/Python/JS/C/Bash/PS best practices, testing, orchestrator, plan-execute |
 | `rust-analyzer-lsp` | claude-plugins-official | `/plugin install rust-analyzer-lsp@claude-plugins-official` | Rust LSP (diagnostics, completions) |
 | `clangd-lsp` | claude-plugins-official | `/plugin install clangd-lsp@claude-plugins-official` | C/C++ LSP |
 | `pyright-lsp` | claude-plugins-official | `/plugin install pyright-lsp@claude-plugins-official` | Python type checking LSP |
@@ -92,6 +92,7 @@ Install in Claude Code after running the installer:
 | `context7` | claude-plugins-official | `/plugin install context7@claude-plugins-official` | Version-specific docs lookup |
 | `github` | claude-plugins-official | `/plugin install github@claude-plugins-official` | Official GitHub MCP (PR/issue/repo) |
 | `frontend-design` | claude-plugins-official | `/plugin install frontend-design@claude-plugins-official` | Production-grade UI generation (design-system aware) |
+| `superpowers` | claude-plugins-official | `/plugin install superpowers@claude-plugins-official` | 14 methodology skills: brainstorming, TDD, systematic debugging, plans, verification |
 | `caveman` | caveman | `/plugin install caveman@caveman` | Ultra-compressed mode (~75% token reduction) |
 
 ---
@@ -163,9 +164,9 @@ statusline/
       c-best-practices/
       bash-best-practices/
       powershell-best-practices/
+      testing-best-practices/
       orchestrator/
       plan-execute/
-      debug/
 hooks/
   lint-on-edit.ps1 / .sh          <- PostToolUse: auto-format on Write/Edit
   track-context.ps1 / .sh         <- PostToolUse: context window estimation

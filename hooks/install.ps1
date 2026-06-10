@@ -57,12 +57,18 @@ function Add-Hook([string]$eventName, [string]$command) {
     $already = @($json.hooks.$eventName) | Where-Object {
         $_.hooks | Where-Object { $_.command -like "*$basename*" }
     }
-    if (-not $already -or $Force) {
-        $json.hooks.$eventName = @($json.hooks.$eventName) + @($entry)
-        Write-Host "[+] Registered hook: $eventName -> $basename" -ForegroundColor Green
-    } else {
+    if ($already -and -not $Force) {
         Write-Host "[=] Hook already registered: $eventName ($basename)" -ForegroundColor Yellow
+        return
     }
+    if ($already) {
+        # -Force: replace the existing entry instead of appending a duplicate
+        $json.hooks.$eventName = @($json.hooks.$eventName | Where-Object {
+            -not ($_.hooks | Where-Object { $_.command -like "*$basename*" })
+        })
+    }
+    $json.hooks.$eventName = @($json.hooks.$eventName) + @($entry)
+    Write-Host "[+] Registered hook: $eventName -> $basename" -ForegroundColor Green
 }
 
 $pwsh = (Get-Command pwsh).Source

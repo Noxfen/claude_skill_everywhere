@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Stop hook -- run tests after Claude's turn, inject failures back so Claude fixes them
 # Registered in settings.json under hooks.Stop alongside update-docs-reminder
-
-set -e
+# No `set -e`: command-substitution assignments (python3 may be missing) must
+# not abort the hook -- every failure path is handled explicitly.
 
 json=$(cat)
 
@@ -41,6 +41,9 @@ command -v "$first_cmd" >/dev/null 2>&1 || exit 0
 
 # Run with timeout (60s)
 output=$(cd "$git_root" && timeout 60 sh -c "$test_cmd" 2>&1) && status=0 || status=$?
+
+# Timeout (124) is not a test failure -- mirror the PS1 version, which exits 0
+[ "$status" -eq 124 ] && exit 0
 
 if [ "$status" -ne 0 ]; then
   echo "Tests failed after your changes. Fix the failures:" >&2
