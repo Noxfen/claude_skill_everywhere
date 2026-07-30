@@ -19,7 +19,7 @@ hooks/                       <- hook scripts + installers
   dep-audit.*                <- PostToolUse: run cargo/npm/pip-audit on dep file changes
   update-docs-reminder.*     <- Stop: remind to update CLAUDE.md/README.md (current turn only)
   run-tests-on-stop.*        <- Stop: run test suite after file edits; inject failures
-  auto-sync.*                <- SessionStart: git pull this repo
+  auto-sync.*                <- SessionStart: git pull every known checkout (env CLAUDE_SKILL_EVERYWHERE_DIR, marketplace clone, ~/claude_skill_everywhere)
   unsafe-rust-blocker.*      <- PreToolUse: block unsafe {} in .rs without // SAFETY: comment
   branch-context-injector.*  <- UserPromptSubmit: inject git branch + dirty count into prompts
   installer-sync-reminder.*  <- Stop: remind to update install.* if hooks/mcp/statusline/sources.json edited

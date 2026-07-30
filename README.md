@@ -84,13 +84,6 @@ Install in Claude Code after running the installer:
 | `hookify` | claude-plugins-official | `/plugin install hookify@claude-plugins-official` | Create hooks from markdown |
 | `feature-dev` | claude-plugins-official | `/plugin install feature-dev@claude-plugins-official` | Structured 7-phase feature development |
 | `chrome-devtools-mcp` | claude-plugins-official | `/plugin install chrome-devtools-mcp@claude-plugins-official` | Chrome DevTools MCP (browser automation, perf, a11y, network) |
-| `plugin-dev` | claude-plugins-official | `/plugin install plugin-dev@claude-plugins-official` | Toolkit for authoring Claude Code plugins |
-| `mcp-server-dev` | claude-plugins-official | `/plugin install mcp-server-dev@claude-plugins-official` | Design/build MCP servers |
-| `claude-md-management` | claude-plugins-official | `/plugin install claude-md-management@claude-plugins-official` | Maintain CLAUDE.md memory files |
-| `playwright` | claude-plugins-official | `/plugin install playwright@claude-plugins-official` | Playwright E2E (React/SvelteKit) |
-| `sentry` | claude-plugins-official | `/plugin install sentry@claude-plugins-official` | Sentry error monitoring |
-| `context7` | claude-plugins-official | `/plugin install context7@claude-plugins-official` | Version-specific docs lookup |
-| `github` | claude-plugins-official | `/plugin install github@claude-plugins-official` | Official GitHub MCP (PR/issue/repo) |
 | `frontend-design` | claude-plugins-official | `/plugin install frontend-design@claude-plugins-official` | Production-grade UI generation (design-system aware) |
 | `superpowers` | claude-plugins-official | `/plugin install superpowers@claude-plugins-official` | Methodology skills: brainstorming, TDD, systematic debugging, plans, verification |
 | `typescript-lsp` | claude-plugins-official | `/plugin install typescript-lsp@claude-plugins-official` | TS/JS LSP (symbol nav, type errors) |
@@ -109,7 +102,7 @@ Install in Claude Code after running the installer:
 |------|-------|-------------|
 | `lint-on-edit` | PostToolUse | Auto-formats/lints after every Write/Edit: `rustfmt`, `ruff`, `prettier`, `clang-format`, `shellcheck`, `PSScriptAnalyzer` |
 | `dep-audit` | PostToolUse | Runs `cargo audit` / `npm audit` / `pip-audit` after edits to dependency files; injects CVEs to Claude |
-| `auto-sync` | SessionStart | `git pull` this repo at session start — keeps skills/hooks updated |
+| `auto-sync` | SessionStart | `git pull --ff-only` every known checkout of this repo at session start — keeps skills/hooks updated |
 | `update-docs-reminder` | Stop | Reminds Claude to update `CLAUDE.md`/`README.md` if files were edited this turn |
 | `run-tests-on-stop` | Stop | Detects project type (Cargo/pytest/npm/make), runs tests after edits, injects failures so Claude self-corrects |
 | `unsafe-rust-blocker` | PreToolUse | Blocks Write/Edit on `.rs` files containing `unsafe {}` without a `// SAFETY:` comment |
@@ -143,7 +136,22 @@ export GITHUB_TOKEN="ghp_..."
 Add new skills/hooks/external repos → commit → push.  
 On other machines: re-run the install script (idempotent, skips already-registered entries).
 
-The `auto-sync` hook runs `git pull` at every session start automatically.
+The `auto-sync` hook runs `git pull --ff-only` at every session start automatically. It checks, in order:
+
+1. `$CLAUDE_SKILL_EVERYWHERE_DIR` — set this to your **dev checkout** if you keep one outside the default location
+2. `~/.claude/plugins/marketplaces/Noxfen-claude_skill_everywhere` — the clone the installer manages
+3. `~/claude_skill_everywhere` — legacy default
+
+Every match that exists is pulled (duplicates resolved by real path), so a dev checkout and the marketplace clone both stay current. To register a dev checkout permanently:
+
+```powershell
+# Windows — permanent
+[System.Environment]::SetEnvironmentVariable("CLAUDE_SKILL_EVERYWHERE_DIR","D:\dev\claude_skill_everywhere","User")
+```
+```bash
+# Linux/WSL -- add to ~/.bashrc or ~/.profile
+export CLAUDE_SKILL_EVERYWHERE_DIR="$HOME/dev/claude_skill_everywhere"
+```
 
 ---
 
