@@ -1,7 +1,9 @@
 #Requires -Version 7.0
 # claude_skill_everywhere -- hook installer (PowerShell 7+)
-# Registers: update-docs-reminder (Stop), run-tests-on-stop (Stop),
-#            auto-sync (SessionStart), lint-on-edit (PostToolUse)
+# Registers 8 hooks: update-docs-reminder / run-tests-on-stop /
+#            installer-sync-reminder (Stop), auto-sync (SessionStart),
+#            lint-on-edit / dep-audit (PostToolUse),
+#            unsafe-rust-blocker (PreToolUse), branch-context-injector (UserPromptSubmit)
 #
 # Usage (remote):  irm https://raw.githubusercontent.com/Noxfen/claude_skill_everywhere/main/hooks/install.ps1 | iex
 # Usage (local):   pwsh -File hooks\install.ps1 [-Force]
@@ -36,8 +38,6 @@ function Get-HookFile([string]$name) {
 
 Get-HookFile "update-docs-reminder.ps1"
 Get-HookFile "run-tests-on-stop.ps1"
-Get-HookFile "compact-warning.ps1"
-Get-HookFile "track-context.ps1"
 Get-HookFile "auto-sync.ps1"
 Get-HookFile "lint-on-edit.ps1"
 Get-HookFile "branch-context-injector.ps1"
@@ -71,15 +71,11 @@ function Add-Hook([string]$eventName, [string]$command) {
     Write-Host "[+] Registered hook: $eventName -> $basename" -ForegroundColor Green
 }
 
-$pwsh = (Get-Command pwsh).Source
-
 Add-Hook "Stop"              "pwsh -NoProfile -File `"$HooksDir\update-docs-reminder.ps1`""
 Add-Hook "Stop"              "pwsh -NoProfile -File `"$HooksDir\run-tests-on-stop.ps1`""
-Add-Hook "Stop"              "pwsh -NoProfile -File `"$HooksDir\compact-warning.ps1`""
 Add-Hook "Stop"              "pwsh -NoProfile -File `"$HooksDir\installer-sync-reminder.ps1`""
 Add-Hook "SessionStart"      "pwsh -NoProfile -File `"$HooksDir\auto-sync.ps1`""
 Add-Hook "PostToolUse"       "pwsh -NoProfile -File `"$HooksDir\lint-on-edit.ps1`""
-Add-Hook "PostToolUse"       "pwsh -NoProfile -File `"$HooksDir\track-context.ps1`""
 Add-Hook "PostToolUse"       "pwsh -NoProfile -File `"$HooksDir\dep-audit.ps1`""
 Add-Hook "PreToolUse"        "pwsh -NoProfile -File `"$HooksDir\unsafe-rust-blocker.ps1`""
 Add-Hook "UserPromptSubmit"  "pwsh -NoProfile -File `"$HooksDir\branch-context-injector.ps1`""

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # claude_skill_everywhere — hook installer (Linux/macOS/WSL)
-# Registers update-docs-reminder (Stop) and auto-sync (SessionStart) into settings.json
+# Registers 8 hooks: update-docs-reminder / run-tests-on-stop /
+#   installer-sync-reminder (Stop), auto-sync (SessionStart),
+#   lint-on-edit / dep-audit (PostToolUse), unsafe-rust-blocker (PreToolUse),
+#   branch-context-injector (UserPromptSubmit) into settings.json
 #
 # Usage (remote):
 #   bash <(curl -sL https://raw.githubusercontent.com/Noxfen/claude_skill_everywhere/main/hooks/install.sh)
@@ -43,8 +46,6 @@ get_hook_file() {
 
 get_hook_file "update-docs-reminder.sh"
 get_hook_file "run-tests-on-stop.sh"
-get_hook_file "compact-warning.sh"
-get_hook_file "track-context.sh"
 get_hook_file "auto-sync.sh"
 get_hook_file "lint-on-edit.sh"
 get_hook_file "branch-context-injector.sh"
@@ -78,22 +79,18 @@ def add_hook(event, command):
 
 docs_cmd    = f'bash "{hooks_dir}/update-docs-reminder.sh"'
 tests_cmd   = f'bash "{hooks_dir}/run-tests-on-stop.sh"'
-compact_cmd = f'bash "{hooks_dir}/compact-warning.sh"'
 sync_reminder_cmd = f'bash "{hooks_dir}/installer-sync-reminder.sh"'
 sync_cmd    = f'bash "{hooks_dir}/auto-sync.sh"'
 lint_cmd    = f'bash "{hooks_dir}/lint-on-edit.sh"'
-ctx_cmd     = f'bash "{hooks_dir}/track-context.sh"'
 audit_cmd   = f'bash "{hooks_dir}/dep-audit.sh"'
 unsafe_cmd  = f'bash "{hooks_dir}/unsafe-rust-blocker.sh"'
 branch_cmd  = f'bash "{hooks_dir}/branch-context-injector.sh"'
 
 add_hook("Stop", docs_cmd)
 add_hook("Stop", tests_cmd)
-add_hook("Stop", compact_cmd)
 add_hook("Stop", sync_reminder_cmd)
 add_hook("SessionStart", sync_cmd)
 add_hook("PostToolUse", lint_cmd)
-add_hook("PostToolUse", ctx_cmd)
 add_hook("PostToolUse", audit_cmd)
 add_hook("PreToolUse", unsafe_cmd)
 add_hook("UserPromptSubmit", branch_cmd)

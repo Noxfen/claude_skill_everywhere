@@ -17,9 +17,9 @@ bash <(curl -sL https://raw.githubusercontent.com/Noxfen/claude_skill_everywhere
 
 The installer does:
 1. Registers `noxfen` marketplace + external marketplaces from `sources.json`
-2. Installs MCP servers: `filesystem`, `git`, `fetch`, `github`
-3. Installs 10 hooks: `lint-on-edit`, `track-context`, `dep-audit` (PostToolUse) · `update-docs-reminder`, `run-tests-on-stop`, `compact-warning`, `installer-sync-reminder` (Stop) · `auto-sync` (SessionStart) · `unsafe-rust-blocker` (PreToolUse) · `branch-context-injector` (UserPromptSubmit)
-4. Installs statusline script (rate-limit bars + context estimate)
+2. Installs MCP servers: `filesystem`, `git`, `fetch`, `github`, `svelte`
+3. Installs 8 hooks: `lint-on-edit`, `dep-audit` (PostToolUse) · `update-docs-reminder`, `run-tests-on-stop`, `installer-sync-reminder` (Stop) · `auto-sync` (SessionStart) · `unsafe-rust-blocker` (PreToolUse) · `branch-context-injector` (UserPromptSubmit)
+4. Installs statusline script (5h/7d rate-limit bars)
 
 After installing, restart Claude Code, then:
 ```
@@ -75,7 +75,7 @@ Install in Claude Code after running the installer:
 
 | Plugin | Marketplace | Command | What it does |
 |--------|------------|---------|-------------|
-| `noxfen-essentials` | noxfen | `/plugin install noxfen-essentials@noxfen` | Skills: Rust/Python/JS/C/Bash/PS best practices, testing, orchestrator, plan-execute |
+| `noxfen-essentials` | noxfen | `/plugin install noxfen-essentials@noxfen` | Skills: Rust/Python/JS/C/Bash/PS best practices + testing |
 | `rust-analyzer-lsp` | claude-plugins-official | `/plugin install rust-analyzer-lsp@claude-plugins-official` | Rust LSP (diagnostics, completions) |
 | `clangd-lsp` | claude-plugins-official | `/plugin install clangd-lsp@claude-plugins-official` | C/C++ LSP |
 | `pyright-lsp` | claude-plugins-official | `/plugin install pyright-lsp@claude-plugins-official` | Python type checking LSP |
@@ -92,7 +92,11 @@ Install in Claude Code after running the installer:
 | `context7` | claude-plugins-official | `/plugin install context7@claude-plugins-official` | Version-specific docs lookup |
 | `github` | claude-plugins-official | `/plugin install github@claude-plugins-official` | Official GitHub MCP (PR/issue/repo) |
 | `frontend-design` | claude-plugins-official | `/plugin install frontend-design@claude-plugins-official` | Production-grade UI generation (design-system aware) |
-| `superpowers` | claude-plugins-official | `/plugin install superpowers@claude-plugins-official` | 14 methodology skills: brainstorming, TDD, systematic debugging, plans, verification |
+| `superpowers` | claude-plugins-official | `/plugin install superpowers@claude-plugins-official` | Methodology skills: brainstorming, TDD, systematic debugging, plans, verification |
+| `typescript-lsp` | claude-plugins-official | `/plugin install typescript-lsp@claude-plugins-official` | TS/JS LSP (symbol nav, type errors) |
+| `claude-security` | claude-plugins-official | `/plugin install claude-security@claude-plugins-official` | In-session vulnerability scanning |
+| `claude-code-setup` | claude-plugins-official | `/plugin install claude-code-setup@claude-plugins-official` | Recommends tailored hooks/skills/MCP/subagents |
+| `code-simplifier` | claude-plugins-official | `/plugin install code-simplifier@claude-plugins-official` | Code-quality refactor/cleanup |
 | `caveman` | caveman | `/plugin install caveman@caveman` | Ultra-compressed mode (~75% token reduction) |
 
 ---
@@ -104,12 +108,10 @@ Install in Claude Code after running the installer:
 | Hook | Event | What it does |
 |------|-------|-------------|
 | `lint-on-edit` | PostToolUse | Auto-formats/lints after every Write/Edit: `rustfmt`, `ruff`, `prettier`, `clang-format`, `shellcheck`, `PSScriptAnalyzer` |
-| `track-context` | PostToolUse | Estimates context window usage from transcript; writes `~/.claude/context-estimate.json` for the statusline |
 | `dep-audit` | PostToolUse | Runs `cargo audit` / `npm audit` / `pip-audit` after edits to dependency files; injects CVEs to Claude |
 | `auto-sync` | SessionStart | `git pull` this repo at session start — keeps skills/hooks updated |
 | `update-docs-reminder` | Stop | Reminds Claude to update `CLAUDE.md`/`README.md` if files were edited this turn |
 | `run-tests-on-stop` | Stop | Detects project type (Cargo/pytest/npm/make), runs tests after edits, injects failures so Claude self-corrects |
-| `compact-warning` | Stop | Warns Claude to run `/compact` when context estimate exceeds 80% |
 | `unsafe-rust-blocker` | PreToolUse | Blocks Write/Edit on `.rs` files containing `unsafe {}` without a `// SAFETY:` comment |
 | `branch-context-injector` | UserPromptSubmit | Injects `[git: branch \| N modified \| N untracked]` into every prompt for live repo state |
 | `installer-sync-reminder` | Stop | Reminds Claude to update `install.{ps1,sh}` when files in `hooks/`, `mcp/`, `statusline/`, or `sources.json` are edited this turn |
@@ -122,6 +124,7 @@ Install in Claude Code after running the installer:
 | `git` | `uvx mcp-server-git` | Query git history, diff, blame on any repo |
 | `fetch` | `uvx mcp-server-fetch` | HTTP GET/POST for API testing |
 | `github` | `npx @modelcontextprotocol/server-github` | Issues, PRs, branches (needs `GITHUB_TOKEN`) |
+| `svelte` | HTTP `https://mcp.svelte.dev/mcp` | Official Svelte/SvelteKit docs + Svelte 5 runes |
 
 **GitHub MCP token** — set before starting Claude Code:
 ```powershell
@@ -153,10 +156,6 @@ plugins/
   noxfen-essentials/        <- main plugin
     .claude-plugin/
       plugin.json
-statusline/
-  statusline-command.ps1    <- rate limit bars for Windows (PS7)
-  statusline-command.sh     <- rate limit bars for Linux/WSL
-  install.ps1 / .sh         <- deploys script + patches settings.json
     skills/                 <- SKILL.md files
       rust-best-practices/
       python-best-practices/
@@ -165,15 +164,15 @@ statusline/
       bash-best-practices/
       powershell-best-practices/
       testing-best-practices/
-      orchestrator/
-      plan-execute/
+statusline/
+  statusline-command.ps1    <- 5h/7d rate-limit bars for Windows (PS7)
+  statusline-command.sh     <- 5h/7d rate-limit bars for Linux/WSL
+  install.ps1 / .sh         <- deploys script + patches settings.json
 hooks/
   lint-on-edit.ps1 / .sh          <- PostToolUse: auto-format on Write/Edit
-  track-context.ps1 / .sh         <- PostToolUse: context window estimation
   dep-audit.ps1 / .sh             <- PostToolUse: cargo/npm/pip-audit on dep changes
   update-docs-reminder.ps1 / .sh  <- Stop: remind to update docs (current turn only)
   run-tests-on-stop.ps1 / .sh     <- Stop: run test suite; inject failures
-  compact-warning.ps1 / .sh       <- Stop: warn when context >80%
   auto-sync.ps1 / .sh             <- SessionStart: git pull this repo
   unsafe-rust-blocker.ps1 / .sh   <- PreToolUse: block unsafe Rust without SAFETY comment
   branch-context-injector.ps1/.sh <- UserPromptSubmit: inject git status into prompts

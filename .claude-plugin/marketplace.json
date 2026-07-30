@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "noxfen",
-  "description": "Noxfen's personal Claude Code marketplace — skills for Rust, Python, JS, C best practices, orchestration, debugging, and more.",
+  "description": "Noxfen's personal Claude Code marketplace — best-practice skills for Rust, Python, JS/TS, C, Bash, PowerShell, and testing.",
   "owner": {
     "name": "Noxfen",
     "email": "david.giustini@tt-group.it"
@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "noxfen-essentials",
-      "description": "Best-practice skills for Rust, Python, JS/TS, C, Bash, PowerShell, plus orchestrator, plan-execute, and debug skills.",
+      "description": "Best-practice skills for Rust, Python, JS/TS, C, Bash, PowerShell, plus a language-agnostic testing skill.",
       "author": {
         "name": "Noxfen"
       },

@@ -113,36 +113,37 @@
       "name": "superpowers",
       "marketplace": "claude-plugins-official",
       "install": "/plugin install superpowers@claude-plugins-official",
-      "description": "14 methodology skills (obra/superpowers): brainstorming, TDD, systematic debugging, plan writing/execution, verification, code review, parallel agents"
+      "description": "Methodology skills (obra/superpowers): brainstorming, TDD, systematic debugging, plan writing/execution, verification, code review, parallel agents"
+    },
+    {
+      "name": "typescript-lsp",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install typescript-lsp@claude-plugins-official",
+      "description": "TypeScript/JavaScript LSP -- symbol navigation, type errors (React/SvelteKit)"
+    },
+    {
+      "name": "claude-security",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install claude-security@claude-plugins-official",
+      "description": "In-session vulnerability scanning at a chosen effort tier; findings self-challenged"
+    },
+    {
+      "name": "claude-code-setup",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install claude-code-setup@claude-plugins-official",
+      "description": "Analyzes a codebase and recommends tailored hooks/skills/MCP/subagents"
+    },
+    {
+      "name": "code-simplifier",
+      "marketplace": "claude-plugins-official",
+      "install": "/plugin install code-simplifier@claude-plugins-official",
+      "description": "Code-quality refactor/cleanup agent -- complements code-review"
     },
     {
       "name": "caveman",
       "marketplace": "caveman",
       "install": "/plugin install caveman@caveman",
       "description": "Ultra-compressed communication mode (~75% token reduction)"
-    }
-  ],
-  "mcp_servers": [
-    {
-      "name": "svelte",
-      "transport": "http",
-      "url": "https://mcp.svelte.dev/mcp",
-      "install": "claude mcp add --scope user --transport http svelte https://mcp.svelte.dev/mcp",
-      "description": "Official Svelte/SvelteKit MCP server -- Svelte 5 runes, SvelteKit data flow, docs lookup"
-    }
-  ],
-  "reference_repos": [
-    {
-      "repo": "hesreallyhim/awesome-claude-code",
-      "description": "Curated list of skills, hooks, slash-commands, agent orchestrators"
-    },
-    {
-      "repo": "VoltAgent/awesome-claude-code-subagents",
-      "description": "100+ specialized Claude Code subagents"
-    },
-    {
-      "repo": "wshobson/agents",
-      "description": "Multi-agent orchestration patterns for Claude Code"
     }
   ]
 }

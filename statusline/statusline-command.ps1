@@ -51,23 +51,6 @@ $seg5 = Format-Segment "5h" $pct5 ([long]($fh.resets_at ?? 0))
 $pctW = $sd.used_percentage
 $segW = $null -ne $pctW ? (Format-Segment "7d" $pctW ([long]($sd.resets_at ?? 0)) $true) : $null
 
-# Context estimate block
-$segCtx = $null
-$ClaudeDir    = $env:CLAUDE_CONFIG_DIR ?? (Join-Path $env:USERPROFILE ".claude")
-$EstimateFile = Join-Path $ClaudeDir "context-estimate.json"
-if (Test-Path $EstimateFile) {
-    try {
-        $est = Get-Content $EstimateFile -Raw | ConvertFrom-Json
-        $age = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - $est.updated_at
-        if ($age -le 300 -and $est.pct -gt 0) {
-            $colorCtx = Get-Color $est.pct
-            $barCtx   = Get-Bar $est.pct
-            $pctFmt   = [math]::Round($est.pct, 0)
-            $segCtx   = "${colorCtx}ctx [${barCtx}] ${pctFmt}%~${reset}"
-        }
-    } catch {}
-}
-
-$parts = @($seg5) + @($segW | Where-Object { $_ }) + @($segCtx | Where-Object { $_ })
+$parts = @($seg5) + @($segW | Where-Object { $_ })
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::Write($parts -join "  ${dim}|${reset}  ")
