@@ -101,7 +101,7 @@
       "name": "caveman",
       "marketplace": "caveman",
       "install": "/plugin install caveman@caveman",
-      "description": "Ultra-compressed communication mode (~75% token reduction)"
+      "description": "Ultra-compressed communication mode (65% measured output-token reduction, per upstream)"
     }
   ]
 }

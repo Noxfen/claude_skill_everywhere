@@ -90,7 +90,7 @@ Install in Claude Code after running the installer:
 | `claude-security` | claude-plugins-official | `/plugin install claude-security@claude-plugins-official` | In-session vulnerability scanning |
 | `claude-code-setup` | claude-plugins-official | `/plugin install claude-code-setup@claude-plugins-official` | Recommends tailored hooks/skills/MCP/subagents |
 | `code-simplifier` | claude-plugins-official | `/plugin install code-simplifier@claude-plugins-official` | Code-quality refactor/cleanup |
-| `caveman` | caveman | `/plugin install caveman@caveman` | Ultra-compressed mode (~75% token reduction) |
+| `caveman` | caveman | `/plugin install caveman@caveman` | Ultra-compressed mode (65% measured output-token reduction) |
 
 ---
 
