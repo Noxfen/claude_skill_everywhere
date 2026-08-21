@@ -102,6 +102,7 @@ if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/sources.json" ]; then
   SOURCES_FILE="$SCRIPT_DIR/sources.json"
 else
   TMP_SOURCES=$(mktemp)
+  trap 'rm -f "${TMP_SOURCES:-}"' EXIT
   if curl -sL "$RAW_BASE/sources.json" -o "$TMP_SOURCES" 2>/dev/null && [ -s "$TMP_SOURCES" ]; then
     SOURCES_FILE="$TMP_SOURCES"
   else
@@ -122,7 +123,7 @@ if [ -n "$SOURCES_FILE" ]; then
     done < <(jq -r '.external_marketplaces[] | [.name, .repo] | @tsv' "$SOURCES_FILE")
   else
     python3 - "$SOURCES_FILE" "$SETTINGS" "$FORCE" <<'PYEOF'
-import json, sys, subprocess
+import json, sys
 
 sources_file, settings_file, force = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
 

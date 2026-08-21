@@ -41,15 +41,17 @@ function Format-Segment([string]$label, [double]$pct, [long]$resetsAt, [bool]$we
 
 $rl   = $data.rate_limits
 $fh   = $rl.five_hour
-$sd   = $rl.seven_day
 
 $pct5 = $fh.used_percentage
 if ($null -eq $pct5) { exit 0 }
 
 $seg5 = Format-Segment "5h" $pct5 ([long]($fh.resets_at ?? 0))
 
-$pctW = $sd.used_percentage
-$segW = $null -ne $pctW ? (Format-Segment "7d" $pctW ([long]($sd.resets_at ?? 0)) $true) : $null
+# Weekly block sent as either `weekly` or `seven_day` -- read both,
+# matching the .sh field-level fallback.
+$pctW = $rl.weekly?.used_percentage ?? $rl.seven_day?.used_percentage
+$resW = $rl.weekly?.resets_at ?? $rl.seven_day?.resets_at ?? 0
+$segW = $null -ne $pctW ? (Format-Segment "7d" $pctW ([long]$resW) $true) : $null
 
 $parts = @($seg5) + @($segW | Where-Object { $_ })
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

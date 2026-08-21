@@ -22,7 +22,7 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 USER_HOME="$HOME"
-DEV_DIR="$HOME/dev"
+DEV_DIR="${CLAUDE_SKILL_DEV_DIR:-$HOME/dev}"
 CLAUDE_JSON="$HOME/.claude.json"
 
 # Read existing mcpServers names (user scope) from ~/.claude.json
@@ -64,8 +64,12 @@ add_http() {
 }
 
 add_stdio filesystem npx -y @modelcontextprotocol/server-filesystem "$USER_HOME" "$DEV_DIR"
-add_stdio git        uvx mcp-server-git
-add_stdio fetch      uvx mcp-server-fetch
+# git/fetch pin the mcp SDK below 2.0: SDK 2.0.0 renamed McpError -> MCPError,
+# which breaks mcp-server-fetch on import. The constraint MUST stay quoted or
+# '<2' is parsed as a shell redirection. Remove the pin once upstream
+# mcp-server-fetch is compatible with mcp>=2.
+add_stdio git        uvx --with 'mcp<2' mcp-server-git
+add_stdio fetch      uvx --with 'mcp<2' mcp-server-fetch
 add_stdio github     npx -y @modelcontextprotocol/server-github
 
 # HTTP transport servers

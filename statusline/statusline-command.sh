@@ -60,9 +60,9 @@ pct5=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
 resets5=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // 0')
 seg5=$(format_segment "5h" "$pct5" "$resets5" 0)
 
-# Weekly block
-pctW=$(echo "$input" | jq -r '.rate_limits.weekly.used_percentage // empty' 2>/dev/null || \
-       echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty' 2>/dev/null)
+# Weekly block -- field-level fallback in ONE jq call: `jq '.a // empty'`
+# exits 0 even when the key is missing, so a shell `||` fallback never runs.
+pctW=$(echo "$input" | jq -r '.rate_limits.weekly.used_percentage // .rate_limits.seven_day.used_percentage // empty' 2>/dev/null)
 
 segW=""
 if [ -n "$pctW" ]; then

@@ -13,9 +13,16 @@ fi
 transcript=$(echo "$json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null)
 [ -z "$transcript" ] || [ ! -f "$transcript" ] && exit 0
 
-grep -q '"name":\s*"\(Write\|Edit\)"' "$transcript" 2>/dev/null || exit 0
+# Only look at the CURRENT turn: anchor on the last real user prompt.
+# NB: tool_result entries are also "type":"user" lines, so they must be
+# excluded or the anchor lands after every Write/Edit and the scan window
+# is empty (the bug that made the sibling reminder hooks silent no-ops).
+last_user_line=$(grep -n '"type":"user"' "$transcript" 2>/dev/null | grep -v tool_result | tail -1 | cut -d: -f1)
+last_user_line=${last_user_line:-0}
+tail -n +"$((last_user_line + 1))" "$transcript" | grep -q '"name":\s*"\(Write\|Edit\)"' 2>/dev/null || exit 0
 
-git_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+workdir=$(echo "$json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('cwd',''))" 2>/dev/null)
+git_root=$(git -C "${workdir:-.}" rev-parse --show-toplevel 2>/dev/null) || exit 0
 
 # Detect project type
 test_cmd=""
@@ -27,7 +34,7 @@ elif [ -f "$git_root/package.json" ]; then
   if node -e "const p=require('$git_root/package.json'); process.exit(p.scripts&&p.scripts.test?0:1)" 2>/dev/null; then
     test_cmd="npm test -- --run"
   elif command -v npx >/dev/null 2>&1; then
-    test_cmd="npx vitest run --reporter=verbose"
+    test_cmd="npx vitest run"
   fi
 elif [ -f "$git_root/Makefile" ] && grep -q '^test:' "$git_root/Makefile" 2>/dev/null; then
   test_cmd="make test"

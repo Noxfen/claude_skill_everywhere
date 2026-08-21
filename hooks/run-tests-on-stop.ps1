@@ -8,10 +8,25 @@ if (-not $data -or $data.stop_hook_active) { exit 0 }
 $transcriptPath = $data.transcript_path
 if (-not $transcriptPath -or -not (Test-Path $transcriptPath)) { exit 0 }
 
-$content = Get-Content $transcriptPath -Raw -ErrorAction SilentlyContinue
-if ($content -notmatch '"name":\s*"(Write|Edit)"') { exit 0 }
+$lines = @(Get-Content $transcriptPath -Encoding utf8 -ErrorAction SilentlyContinue)
+if (-not $lines) { exit 0 }
 
-$gitRoot = git rev-parse --show-toplevel 2>$null
+# Only look at the CURRENT turn: anchor on the last real user prompt.
+# NB: tool_result entries are also "type":"user" lines, so they must be
+# excluded or the anchor lands after every Write/Edit and the scan window
+# is empty (the bug that made the sibling reminder hooks silent no-ops).
+$lastUserIdx = -1
+for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+    if ($lines[$i] -match '"type":"user"' -and $lines[$i] -notmatch '"tool_result"') { $lastUserIdx = $i; break }
+}
+$hasEdit = $false
+for ($i = $lastUserIdx + 1; $i -lt $lines.Count; $i++) {
+    if ($lines[$i] -match '"name":\s*"(Write|Edit)"') { $hasEdit = $true; break }
+}
+if (-not $hasEdit) { exit 0 }
+
+$workDir = if ($data.cwd -and (Test-Path $data.cwd)) { $data.cwd } else { Get-Location }
+$gitRoot = git -C $workDir rev-parse --show-toplevel 2>$null
 if ($LASTEXITCODE -ne 0 -or -not $gitRoot) { exit 0 }
 $gitRoot = $gitRoot.Trim()
 

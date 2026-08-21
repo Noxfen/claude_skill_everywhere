@@ -20,6 +20,7 @@ The installer does:
 2. Installs MCP servers: `filesystem`, `git`, `fetch`, `github`, `svelte`
 3. Installs 8 hooks: `lint-on-edit`, `dep-audit` (PostToolUse) · `update-docs-reminder`, `run-tests-on-stop`, `installer-sync-reminder` (Stop) · `auto-sync` (SessionStart) · `unsafe-rust-blocker` (PreToolUse) · `branch-context-injector` (UserPromptSubmit)
 4. Installs statusline script (5h/7d rate-limit bars)
+5. Installs every plugin listed in `sources.json` → `recommended_plugins` (~15 plugins from the registered marketplaces)
 
 After installing, restart Claude Code, then:
 ```
@@ -37,10 +38,9 @@ After installing, restart Claude Code, then:
 | Claude Code | latest | everything | `winget install Anthropic.ClaudeCode` |
 | **PowerShell 7** | **7.0+** | **all hook scripts (required)** | **`winget install Microsoft.PowerShell`** |
 | Git | 2.x | installer, auto-sync hook | `winget install Git.Git` |
-| Node.js | 18+ | MCP servers (filesystem, github, fetch) | `winget install OpenJS.NodeJS` |
+| Node.js | 18+ | MCP servers (filesystem, github) | `winget install OpenJS.NodeJS` |
 | Python | 3.10+ | uv + Python-based MCP servers | `winget install Python.Python.3.11` |
-| PowerShell | 5.1+ | hooks | built-in on Windows 10/11 |
-| PSScriptAnalyzer | 1.x | lint-on-edit for `.ps1` | **auto-installed** by installer |
+| PSScriptAnalyzer | 1.x | lint-on-edit for `.ps1` | `Install-Module PSScriptAnalyzer -Scope CurrentUser` |
 | uv | any | MCP git/fetch servers | **auto-installed** by installer (`pip install uv`) |
 | shellcheck | any | lint-on-edit for `.sh` | `winget install koalaman.shellcheck` |
 | ruff | any | lint-on-edit for `.py` | `pip install ruff` |
@@ -54,11 +54,11 @@ After installing, restart Claude Code, then:
 |------|-----|-------------|---------|
 | Claude Code | latest | everything | `npm install -g @anthropic-ai/claude-code` |
 | Git | 2.x | installer, auto-sync hook | `apt install git` |
-| Node.js | 18+ | MCP servers (filesystem, github, fetch) | `apt install nodejs` or [nvm](https://github.com/nvm-sh/nvm) |
-| Python | 3.10+ | uv + Python-based MCP servers | `apt install python3` |
+| Node.js | 18+ | MCP servers (filesystem, github) | `apt install nodejs` or [nvm](https://github.com/nvm-sh/nvm) |
+| Python | 3.10+ | uv + Python-based MCP servers; **required** by hooks + hooks/statusline installers (no jq fallback) | `apt install python3` |
 | Bash | 4+ | hooks | built-in |
 | uv | any | MCP git/fetch servers | **auto-installed** by installer |
-| jq | any | `install.sh` JSON parsing (fallback: python3) | `apt install jq` |
+| jq | any | **required** by statusline-command.sh (no fallback); `install.sh` JSON parsing (fallback: python3) | `apt install jq` |
 | shellcheck | any | lint-on-edit for `.sh` | `apt install shellcheck` |
 | ruff | any | lint-on-edit for `.py` | `pip install ruff` |
 | rustup / cargo | 1.x | Rust projects | [rustup.rs](https://rustup.rs) |
@@ -114,8 +114,8 @@ Install in Claude Code after running the installer:
 | Server | Command | Purpose |
 |--------|---------|---------|
 | `filesystem` | `npx @modelcontextprotocol/server-filesystem` | Read/write files in `~/` and `~/dev` |
-| `git` | `uvx mcp-server-git` | Query git history, diff, blame on any repo |
-| `fetch` | `uvx mcp-server-fetch` | HTTP GET/POST for API testing |
+| `git` | `uvx --with 'mcp<2' mcp-server-git` | Query git history, diff, blame on any repo |
+| `fetch` | `uvx --with 'mcp<2' mcp-server-fetch` | HTTP GET/POST for API testing |
 | `github` | `npx @modelcontextprotocol/server-github` | Issues, PRs, branches (needs `GITHUB_TOKEN`) |
 | `svelte` | HTTP `https://mcp.svelte.dev/mcp` | Official Svelte/SvelteKit docs + Svelte 5 runes |
 

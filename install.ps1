@@ -162,4 +162,8 @@ if ($sourcesJson -and $sourcesJson.recommended_plugins) {
 Write-Host ""
 Write-Host "Done!" -ForegroundColor Cyan
 Write-Host ""
+Write-Host "Next steps in Claude Code:" -ForegroundColor Gray
+Write-Host "  /plugin discover                          -> browse available plugins" -ForegroundColor Gray
+Write-Host "  /plugin install noxfen-essentials@noxfen  -> install skills" -ForegroundColor Gray
+Write-Host ""
 Write-Host "To sync after updating sources.json, re-run this installer." -ForegroundColor Gray

@@ -21,10 +21,13 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 $UserHome = $env:USERPROFILE
 $DevDir   = $env:CLAUDE_SKILL_DEV_DIR ?? "D:\dev"
 
+# git/fetch pin the mcp SDK below 2.0: SDK 2.0.0 renamed McpError -> MCPError,
+# which breaks mcp-server-fetch on import. Remove the pin once upstream
+# mcp-server-fetch is compatible with mcp>=2.
 $Servers = @(
     @{ name = "filesystem"; cmd = "npx"; args = @("-y", "@modelcontextprotocol/server-filesystem", $UserHome, $DevDir) }
-    @{ name = "git";        cmd = "uvx"; args = @("mcp-server-git") }
-    @{ name = "fetch";      cmd = "uvx"; args = @("mcp-server-fetch") }
+    @{ name = "git";        cmd = "uvx"; args = @("--with", "mcp<2", "mcp-server-git") }
+    @{ name = "fetch";      cmd = "uvx"; args = @("--with", "mcp<2", "mcp-server-fetch") }
     @{ name = "github";     cmd = "npx"; args = @("-y", "@modelcontextprotocol/server-github") }
 )
 

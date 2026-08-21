@@ -15,8 +15,10 @@ fi
 transcript=$(echo "$json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null)
 [ -z "$transcript" ] || [ ! -f "$transcript" ] && exit 0
 
-# Find Write/Edit only after the last user message (current turn only)
-last_user_line=$(grep -n '"type":"user"' "$transcript" 2>/dev/null | tail -1 | cut -d: -f1)
+# Find Write/Edit only after the last REAL user prompt (current turn only).
+# tool_result entries are also "type":"user" lines and must be excluded,
+# otherwise the anchor lands after every Write/Edit and the hook never fires.
+last_user_line=$(grep -n '"type":"user"' "$transcript" 2>/dev/null | grep -v tool_result | tail -1 | cut -d: -f1)
 last_user_line=${last_user_line:-0}
 if ! tail -n +"$((last_user_line + 1))" "$transcript" | grep -q '"name":\s*"\(Write\|Edit\)"' 2>/dev/null; then
   exit 0

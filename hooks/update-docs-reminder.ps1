@@ -11,10 +11,12 @@ if (-not $transcriptPath -or -not (Test-Path $transcriptPath)) { exit 0 }
 $lines = Get-Content $transcriptPath -Encoding utf8 -ErrorAction SilentlyContinue
 if (-not $lines) { exit 0 }
 
-# Find last user message — Write/Edit after it = current turn only
+# Find last REAL user prompt — Write/Edit after it = current turn only.
+# tool_result entries are also "type":"user" lines and must be excluded,
+# otherwise the anchor lands after every Write/Edit and the hook never fires.
 $lastUserIdx = -1
 for ($i = $lines.Count - 1; $i -ge 0; $i--) {
-    if ($lines[$i] -match '"type":"user"') { $lastUserIdx = $i; break }
+    if ($lines[$i] -match '"type":"user"' -and $lines[$i] -notmatch '"tool_result"') { $lastUserIdx = $i; break }
 }
 $hasEdit = $false
 for ($i = $lastUserIdx + 1; $i -lt $lines.Count; $i++) {

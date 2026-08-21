@@ -10,7 +10,7 @@ It also distributes hooks and registers external marketplaces from `sources.json
 ## Structure
 
 ```
-plugins/noxfen-essentials/   <- main plugin (skills, commands, agents)
+plugins/noxfen-essentials/   <- main plugin (skills only)
   .claude-plugin/plugin.json <- plugin manifest
   skills/                    <- SKILL.md files (auto-loaded by Claude when installed)
 hooks/                       <- hook scripts + installers
@@ -23,10 +23,14 @@ hooks/                       <- hook scripts + installers
   unsafe-rust-blocker.*      <- PreToolUse: block unsafe {} in .rs without // SAFETY: comment
   branch-context-injector.*  <- UserPromptSubmit: inject git branch + dirty count into prompts
   installer-sync-reminder.*  <- Stop: remind to update install.* if hooks/mcp/statusline/sources.json edited
+mcp/
+  install.ps1 / install.sh   <- installs MCP servers (filesystem, git, fetch, github, svelte)
+  README.md
 statusline/
   statusline-command.ps1/.sh <- 5h/7d rate-limit bars for Claude Code statusline
-sources.json                 <- external marketplaces to register on install
-install.ps1 / install.sh     <- root one-shot installer (marketplace + hooks)
+  install.ps1 / install.sh   <- deploys statusline + patches settings.json
+sources.json                 <- external marketplaces + recommended plugins to register on install
+install.ps1 / install.sh     <- root one-shot installer (marketplace + statusline + MCP + hooks + plugins)
 ```
 
 ## Adding a new skill
@@ -47,12 +51,18 @@ install.ps1 / install.sh     <- root one-shot installer (marketplace + hooks)
 
 Edit `sources.json` → add entry to `external_marketplaces` → commit + push → re-run installer.
 
+## Adding an MCP server
+
+1. Add the server to BOTH `mcp/install.ps1` (`$Servers`/`$HttpServers` arrays) and `mcp/install.sh` (`add_stdio`/`add_http` calls)
+2. Add a row to the tables in `mcp/README.md` and root `README.md`
+3. Commit + push → re-run installer on each device (idempotent, skips already-configured servers)
+
 ## Conventions
 
-- Scripts: PowerShell for Windows (`.ps1`), Bash for Linux/macOS (`.sh`) — always both
+- Scripts: PowerShell 7+ for Windows (`.ps1`), Bash for Linux/macOS (`.sh`) — always both
 - Hooks: always exit 0 unless returning feedback to Claude (exit 2 = inject message via **stderr**, not stdout)
 - Skills: description field drives when Claude auto-activates the skill — be specific
-- No dependencies beyond what Claude Code ships: PowerShell, bash, python3 or jq for JSON
+- Dependencies: python3 required by hooks and the hooks/statusline installers; jq required by `statusline-command.sh`; `install.sh` uses jq with python3 fallback
 
 ## Install (one-liner)
 
