@@ -20,7 +20,8 @@ seen=""
 
 for dir in "${CANDIDATES[@]}"; do
   [ -n "$dir" ] || continue
-  [ -d "$dir/.git" ] || continue
+  # Linked worktrees have a .git FILE, not a directory -- ask git itself.
+  git -C "$dir" rev-parse --git-dir >/dev/null 2>&1 || continue
 
   # Deduplicate: the same checkout may be reachable by several of the paths above
   real=$(cd "$dir" 2>/dev/null && pwd -P) || continue

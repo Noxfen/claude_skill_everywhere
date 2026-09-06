@@ -41,7 +41,7 @@ def process(data: Optional[str]) -> List[int]:
 
 - All function signatures: params + return type
 - All class attributes: annotated in `__init__` or as class variables
-- `Any` only as last resort — use `object` or `Unknown` where possible
+- `Any` only as last resort — prefer `object` (opaque but type-safe), a `Protocol`, or an explicit union; `Unknown` is a type-checker inference artifact (pyright), not an annotation you can write
 - Enable `from __future__ import annotations` for forward references
 
 ## Error handling
@@ -82,7 +82,7 @@ class Config:
 
 - `dataclass` for simple value objects
 - `pydantic.BaseModel` for data that needs validation or JSON serialization
-- Avoid mutable default arguments — use `field(default_factory=...)`
+- Avoid mutable defaults: in dataclasses use `field(default_factory=...)`; in regular function signatures use `param: list[str] | None = None` + `if param is None: param = []`
 
 ## Functions and purity
 

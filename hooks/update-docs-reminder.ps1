@@ -12,15 +12,36 @@ $lines = Get-Content $transcriptPath -Encoding utf8 -ErrorAction SilentlyContinu
 if (-not $lines) { exit 0 }
 
 # Find last REAL user prompt — Write/Edit after it = current turn only.
-# tool_result entries are also "type":"user" lines and must be excluded,
-# otherwise the anchor lands after every Write/Edit and the hook never fires.
+# Regex is a cheap prefilter (tolerant of JSON whitespace); candidates are
+# parsed as JSON so a prompt merely mentioning tool_result, or a structural
+# tool_result entry (also "type":"user"), is classified correctly.
 $lastUserIdx = -1
 for ($i = $lines.Count - 1; $i -ge 0; $i--) {
-    if ($lines[$i] -match '"type":"user"' -and $lines[$i] -notmatch '"tool_result"') { $lastUserIdx = $i; break }
+    if ($lines[$i] -notmatch '"type"\s*:\s*"user"') { continue }
+    $rec = $null
+    try { $rec = $lines[$i] | ConvertFrom-Json -ErrorAction Stop } catch {}
+    if ($rec) {
+        if ($rec.type -ne 'user') { continue }
+        $content = $rec.message?.content
+        $isToolResult = $false
+        if ($content -is [System.Array]) {
+            foreach ($c in $content) { if ($c.type -eq 'tool_result') { $isToolResult = $true; break } }
+        }
+        if (-not $isToolResult) { $lastUserIdx = $i; break }
+    } elseif ($lines[$i] -notmatch '"tool_result"') { $lastUserIdx = $i; break }
 }
 $hasEdit = $false
 for ($i = $lastUserIdx + 1; $i -lt $lines.Count; $i++) {
-    if ($lines[$i] -match '"name":\s*"(Write|Edit)"') { $hasEdit = $true; break }
+    if ($lines[$i] -notmatch '"name"\s*:\s*"(Write|Edit)"') { continue }
+    $rec = $null
+    try { $rec = $lines[$i] | ConvertFrom-Json -ErrorAction Stop } catch { $hasEdit = $true; break }
+    $content = $rec.message?.content
+    if ($content -is [System.Array]) {
+        foreach ($c in $content) {
+            if ($c.type -eq 'tool_use' -and @('Write','Edit') -contains $c.name) { $hasEdit = $true; break }
+        }
+    }
+    if ($hasEdit) { break }
 }
 if (-not $hasEdit) { exit 0 }
 

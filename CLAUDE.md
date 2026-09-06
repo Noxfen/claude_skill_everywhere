@@ -37,15 +37,16 @@ install.ps1 / install.sh     <- root one-shot installer (marketplace + statuslin
 
 1. Create `plugins/noxfen-essentials/skills/<skill-name>/SKILL.md`
 2. Frontmatter: `name`, `description` (trigger conditions), `version`
-3. Commit + push
-4. On any device: `/plugin update noxfen-essentials@noxfen`
+3. **Bump `version` in `plugins/noxfen-essentials/.claude-plugin/plugin.json`** — with an explicit version, `/plugin update` only delivers new content when the version changes
+4. Commit + push
+5. On any device: `/plugin update noxfen-essentials@noxfen`
 
 ## Adding a new hook
 
 1. Create the script in `hooks/` (both `.ps1` and `.sh`)
 2. Register it in `hooks/install.ps1` and `hooks/install.sh`
 3. Commit + push
-4. On any device: re-run `install.ps1` or `install.sh`
+4. On any device: re-run `install.ps1` or `install.sh` — the `auto-sync` hook only pulls the repo, it does NOT redeploy the hook copies in `~/.claude/hooks/`
 
 ## Adding an external marketplace
 

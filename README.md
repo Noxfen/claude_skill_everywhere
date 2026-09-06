@@ -65,7 +65,7 @@ After installing, restart Claude Code, then:
 | clangd | any | `clangd-lsp` plugin, lint `.c/.h` | `apt install clangd` |
 | pyright | any | `pyright-lsp` plugin | `npm install -g pyright` |
 
-**Bold** = installed automatically by the installer. All others are optional — missing tools are silently skipped by hooks.
+**Bold** = installed automatically by the installer. Node.js, Python and Git are prerequisites for the MCP servers and installers; the formatters/linters are optional — hooks silently skip missing ones.
 
 ---
 
@@ -80,7 +80,7 @@ Install in Claude Code after running the installer:
 | `clangd-lsp` | claude-plugins-official | `/plugin install clangd-lsp@claude-plugins-official` | C/C++ LSP |
 | `pyright-lsp` | claude-plugins-official | `/plugin install pyright-lsp@claude-plugins-official` | Python type checking LSP |
 | `code-review` | claude-plugins-official | `/plugin install code-review@claude-plugins-official` | Automated PR review (`/code-review`) |
-| `commit-commands` | claude-plugins-official | `/plugin install commit-commands@claude-plugins-official` | `/commit`, `/push`, `/pr` commands |
+| `commit-commands` | claude-plugins-official | `/plugin install commit-commands@claude-plugins-official` | `/commit`, `/commit-push-pr`, `/clean_gone` commands |
 | `hookify` | claude-plugins-official | `/plugin install hookify@claude-plugins-official` | Create hooks from markdown |
 | `feature-dev` | claude-plugins-official | `/plugin install feature-dev@claude-plugins-official` | Structured 7-phase feature development |
 | `chrome-devtools-mcp` | claude-plugins-official | `/plugin install chrome-devtools-mcp@claude-plugins-official` | Chrome DevTools MCP (browser automation, perf, a11y, network) |
@@ -115,18 +115,18 @@ Install in Claude Code after running the installer:
 |--------|---------|---------|
 | `filesystem` | `npx @modelcontextprotocol/server-filesystem` | Read/write files in `~/` and `~/dev` |
 | `git` | `uvx --with 'mcp<2' mcp-server-git` | Query git history, diff, blame on any repo |
-| `fetch` | `uvx --with 'mcp<2' mcp-server-fetch` | HTTP GET/POST for API testing |
-| `github` | `npx @modelcontextprotocol/server-github` | Issues, PRs, branches (needs `GITHUB_TOKEN`) |
+| `fetch` | `uvx --with 'mcp<2' mcp-server-fetch` | Fetch a URL and return its content (no method/body parameters) |
+| `github` | `npx @modelcontextprotocol/server-github` | Issues, PRs, branches (needs `GITHUB_PERSONAL_ACCESS_TOKEN`) |
 | `svelte` | HTTP `https://mcp.svelte.dev/mcp` | Official Svelte/SvelteKit docs + Svelte 5 runes |
 
 **GitHub MCP token** — set before starting Claude Code:
 ```powershell
 # Windows — permanent
-[System.Environment]::SetEnvironmentVariable("GITHUB_TOKEN","ghp_...", "User")
+[System.Environment]::SetEnvironmentVariable("GITHUB_PERSONAL_ACCESS_TOKEN","ghp_...", "User")
 ```
 ```bash
 # Linux -- add to ~/.bashrc or ~/.profile
-export GITHUB_TOKEN="ghp_..."
+export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_..."
 ```
 
 ---
@@ -197,8 +197,9 @@ install.ps1 / .sh          <- root one-shot installer
 
 1. Create `plugins/noxfen-essentials/skills/<name>/SKILL.md`
 2. Frontmatter: `name`, `description` (trigger conditions), `version`
-3. Commit + push
-4. On any device: `/plugin update noxfen-essentials@noxfen`
+3. Bump `version` in `plugins/noxfen-essentials/.claude-plugin/plugin.json` (with an explicit version, `/plugin update` only delivers new content when it changes)
+4. Commit + push
+5. On any device: `/plugin update noxfen-essentials@noxfen`
 
 ## Add an external marketplace
 

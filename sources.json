@@ -41,7 +41,7 @@
       "name": "commit-commands",
       "marketplace": "claude-plugins-official",
       "install": "/plugin install commit-commands@claude-plugins-official",
-      "description": "Git workflow: /commit, /push, /pr slash commands"
+      "description": "Git workflow: /commit, /commit-push-pr, /clean_gone slash commands"
     },
     {
       "name": "hookify",

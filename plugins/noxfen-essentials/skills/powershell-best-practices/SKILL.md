@@ -37,7 +37,7 @@ param(
 $ErrorActionPreference = "Stop"
 ```
 
-- `[CmdletBinding()]` gives `-Verbose`, `-Debug`, `-WhatIf` for free
+- `[CmdletBinding()]` gives `-Verbose` and `-Debug` for free; `-WhatIf`/`-Confirm` require `[CmdletBinding(SupportsShouldProcess)]` AND guarding the operation with `if ($PSCmdlet.ShouldProcess($target)) { ... }`
 - `$ErrorActionPreference = "Stop"` — treat all errors as terminating
 - `#Requires` — document minimum PS version explicitly
 
@@ -55,14 +55,14 @@ $ErrorActionPreference = "Stop"
 try {
     $result = Invoke-RestMethod -Uri $url -Method Get
 } catch [System.Net.WebException] {
-    Write-Error "Network error: $_"
-    return $null
-} catch {
+    Write-Warning "Network error: $_"   # NB: with ErrorActionPreference=Stop,
+    return $null                        # Write-Error is TERMINATING -- it would
+} catch {                               # throw again and never reach `return`
     throw  # re-throw unexpected errors
 }
 
-# Use Write-Error not throw for non-fatal
-# Use throw for fatal -- it terminates the call stack
+# With $ErrorActionPreference = "Stop", Write-Error terminates too:
+# use Write-Warning for non-fatal messages, throw for fatal errors
 ```
 
 Never use `trap` in modern PS — use `try/catch/finally`.

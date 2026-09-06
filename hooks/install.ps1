@@ -46,7 +46,12 @@ Get-HookFile "dep-audit.ps1"
 Get-HookFile "installer-sync-reminder.ps1"
 
 $json = Get-Content $Settings -Raw | ConvertFrom-Json
-$json.hooks ??= [PSCustomObject]@{}
+if ($null -eq $json) { $json = [PSCustomObject]@{} }
+# NB: `??=` cannot CREATE a property on a PSCustomObject -- it throws when the
+# key is absent (fresh `{}` settings). Add-Member is required.
+if (-not ($json.PSObject.Properties.Name -contains 'hooks')) {
+    $json | Add-Member -NotePropertyName hooks -NotePropertyValue ([PSCustomObject]@{})
+}
 
 function Add-Hook([string]$eventName, [string]$command) {
     $entry = [PSCustomObject]@{ hooks = @([PSCustomObject]@{ type = "command"; command = $command }) }
@@ -62,9 +67,13 @@ function Add-Hook([string]$eventName, [string]$command) {
         return
     }
     if ($already) {
-        # -Force: replace the existing entry instead of appending a duplicate
-        $json.hooks.$eventName = @($json.hooks.$eventName | Where-Object {
-            -not ($_.hooks | Where-Object { $_.command -like "*$basename*" })
+        # -Force: replace ONLY the managed command. An entry may carry other
+        # hook commands (user-added siblings) and matcher/metadata -- filter
+        # the inner hooks array and keep the entry unless it becomes empty.
+        $json.hooks.$eventName = @($json.hooks.$eventName | ForEach-Object {
+            $kept = @($_.hooks | Where-Object { $_.command -notlike "*$basename*" })
+            if ($kept.Count -gt 0) { $_.hooks = $kept; $_ }
+            elseif ($null -eq $_.hooks -or @($_.hooks).Count -eq 0) { $_ }  # entry with no hooks array: not ours, keep
         })
     }
     $json.hooks.$eventName = @($json.hooks.$eventName) + @($entry)

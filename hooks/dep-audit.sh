@@ -17,11 +17,16 @@ dir=$(dirname "$path")
 
 run_audit() {
     local cmd="$1" label="$2"
-    local output
-    output=$(cd "$dir" && timeout 45 sh -c "$cmd" 2>&1)
-    local rc=$?
+    local output rc
+    # GNU `timeout` is absent on stock macOS: fall back to no limit rather
+    # than mis-reporting command-not-found as vulnerabilities.
+    if command -v timeout >/dev/null 2>&1; then
+        output=$(cd "$dir" && timeout 45 sh -c "$cmd" 2>&1); rc=$?
+    else
+        output=$(cd "$dir" && sh -c "$cmd" 2>&1); rc=$?
+    fi
     if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then
-        echo "${label} found vulnerabilities in ${file}:" >&2
+        echo "${label} reported issues for ${file}:" >&2
         echo "$output" >&2
         exit 2
     fi
@@ -38,11 +43,15 @@ case "$file" in
             run_audit "npm audit --audit-level=high" "npm audit"
         fi
         ;;
-    requirements.txt|pyproject.toml)
+    requirements.txt)
+        # Audit the edited file itself (-r); an environment audit says nothing
+        # about this project's pinned deps. NB: pip-audit has no --quiet flag.
         if command -v pip-audit >/dev/null; then
-            run_audit "pip-audit --quiet" "pip-audit"
+            run_audit "pip-audit --progress-spinner off -r \"$file\"" "pip-audit"
         fi
         ;;
+    # pyproject.toml deliberately skipped: pip-audit cannot audit it directly
+    # and an environment audit would report an unrelated interpreter's deps.
 esac
 
 exit 0

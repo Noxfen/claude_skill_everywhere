@@ -19,7 +19,7 @@ bash mcp/install.sh
 |------|---------|---------|
 | `filesystem` | `npx @modelcontextprotocol/server-filesystem` | Read/write files outside cwd |
 | `git` | `uvx --with 'mcp<2' mcp-server-git` | Query git history, diff, blame |
-| `fetch` | `uvx --with 'mcp<2' mcp-server-fetch` | HTTP GET/POST for API testing |
+| `fetch` | `uvx --with 'mcp<2' mcp-server-fetch` | Fetch a URL and return its content (no method/body parameters) |
 | `github` | `npx @modelcontextprotocol/server-github` | Issues, PRs, branches via API |
 | `svelte` | HTTP `https://mcp.svelte.dev/mcp` | Official Svelte/SvelteKit docs + Svelte 5 runes |
 
@@ -27,7 +27,7 @@ bash mcp/install.sh
 
 Set env var before starting Claude Code:
 ```powershell
-$env:GITHUB_TOKEN = "ghp_your_token_here"
+$env:GITHUB_PERSONAL_ACCESS_TOKEN = "ghp_your_token_here"
 ```
 Or add to system environment variables permanently.
 

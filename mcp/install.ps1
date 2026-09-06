@@ -34,12 +34,19 @@ $Servers = @(
 $claudeJson = Join-Path $env:USERPROFILE ".claude.json"
 $existingMcp = (Test-Path $claudeJson) ? ((Get-Content $claudeJson | ConvertFrom-Json).mcpServers?.PSObject.Properties.Name ?? @()) : @()
 
+$failed = @()
+
 foreach ($s in $Servers) {
     if ($existingMcp -contains $s.name) {
         Write-Host "[=] Already configured: $($s.name)" -ForegroundColor Yellow
     } else {
         claude mcp add --scope user $s.name -- $s.cmd @($s.args) 2>$null
-        Write-Host "[+] $($s.name): $($s.cmd) $($s.args -join ' ')" -ForegroundColor Green
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[+] $($s.name): $($s.cmd) $($s.args -join ' ')" -ForegroundColor Green
+        } else {
+            $failed += $s.name
+            Write-Host "[!] Failed to add $($s.name) (exit $LASTEXITCODE)" -ForegroundColor Yellow
+        }
     }
 }
 
@@ -53,10 +60,21 @@ foreach ($s in $HttpServers) {
         Write-Host "[=] Already configured: $($s.name)" -ForegroundColor Yellow
     } else {
         claude mcp add --scope user --transport http $s.name $s.url 2>$null
-        Write-Host "[+] $($s.name) (http): $($s.url)" -ForegroundColor Green
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[+] $($s.name) (http): $($s.url)" -ForegroundColor Green
+        } else {
+            $failed += $s.name
+            Write-Host "[!] Failed to add $($s.name) (exit $LASTEXITCODE)" -ForegroundColor Yellow
+        }
     }
 }
 
 Write-Host ""
-Write-Host "Done. Restart Claude Code to activate MCP servers." -ForegroundColor Cyan
-Write-Host "GitHub MCP needs GITHUB_TOKEN env var set." -ForegroundColor Yellow
+if ($failed.Count -gt 0) {
+    Write-Host "Completed with failures: $($failed -join ', ')" -ForegroundColor Yellow
+} else {
+    Write-Host "Done. Restart Claude Code to activate MCP servers." -ForegroundColor Cyan
+}
+Write-Host "GitHub MCP needs the GITHUB_PERSONAL_ACCESS_TOKEN env var set." -ForegroundColor Yellow
+
+exit ($failed.Count -gt 0 ? 1 : 0)

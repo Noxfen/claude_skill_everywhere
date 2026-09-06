@@ -103,7 +103,7 @@ if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/sources.json" ]; then
 else
   TMP_SOURCES=$(mktemp)
   trap 'rm -f "${TMP_SOURCES:-}"' EXIT
-  if curl -sL "$RAW_BASE/sources.json" -o "$TMP_SOURCES" 2>/dev/null && [ -s "$TMP_SOURCES" ]; then
+  if curl -sSfL "$RAW_BASE/sources.json" -o "$TMP_SOURCES" 2>/dev/null && [ -s "$TMP_SOURCES" ]; then
     SOURCES_FILE="$TMP_SOURCES"
   else
     echo "[!] Could not fetch sources.json — skipping external marketplaces"
@@ -148,43 +148,38 @@ PYEOF
   fi
 fi
 
-# --- Install statusline ---
-if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/statusline/install.sh" ]; then
-  bash "$SCRIPT_DIR/statusline/install.sh" || echo "[!] Statusline installer failed"
-else
-  TMP_SL=$(mktemp)
-  if curl -sL "$RAW_BASE/statusline/install.sh" -o "$TMP_SL"; then
-    bash "$TMP_SL" || echo "[!] Statusline installer failed"
-    rm -f "$TMP_SL"
-  else
-    echo "[!] Could not fetch statusline/install.sh -- skipping statusline"
-  fi
-fi
+FAILURES=0
 
-# --- Install MCP servers ---
-if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/mcp/install.sh" ]; then
-  bash "$SCRIPT_DIR/mcp/install.sh" || echo "[!] MCP installer failed"
-else
-  TMP_MCP=$(mktemp)
-  if curl -sL "$RAW_BASE/mcp/install.sh" -o "$TMP_MCP"; then
-    bash "$TMP_MCP" || echo "[!] MCP installer failed"
-    rm -f "$TMP_MCP"
+# Run a sub-installer from the local checkout or via download; count failures.
+run_sub_installer() {
+  local label="$1" rel="$2"; shift 2
+  local rc=0
+  if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/$rel" ]; then
+    bash "$SCRIPT_DIR/$rel" "$@" || rc=$?
   else
-    echo "[!] Could not fetch mcp/install.sh -- skipping MCP servers"
+    local tmp
+    tmp=$(mktemp)
+    if curl -sSfL "$RAW_BASE/$rel" -o "$tmp"; then
+      bash "$tmp" "$@" || rc=$?
+      rm -f "$tmp"
+    else
+      rm -f "$tmp"
+      echo "[!] Could not fetch $rel -- skipping $label"
+      rc=1
+    fi
   fi
-fi
+  if [ "$rc" -ne 0 ]; then
+    echo "[!] $label installer failed (exit $rc)"
+    FAILURES=$((FAILURES+1))
+  fi
+}
 
-# --- Install hooks ---
-if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/hooks/install.sh" ]; then
-  bash "$SCRIPT_DIR/hooks/install.sh" $([ "$FORCE" = "1" ] && echo "--force")
+run_sub_installer "statusline" "statusline/install.sh"
+run_sub_installer "mcp"        "mcp/install.sh"
+if [ "$FORCE" = "1" ]; then
+  run_sub_installer "hooks" "hooks/install.sh" --force
 else
-  TMP_HOOK=$(mktemp)
-  if curl -sL "$RAW_BASE/hooks/install.sh" -o "$TMP_HOOK"; then
-    bash "$TMP_HOOK" $([ "$FORCE" = "1" ] && echo "--force")
-    rm -f "$TMP_HOOK"
-  else
-    echo "[!] Could not fetch hooks/install.sh — skipping hooks"
-  fi
+  run_sub_installer "hooks" "hooks/install.sh"
 fi
 
 # --- Install recommended plugins ---
@@ -194,27 +189,44 @@ if [ -n "$SOURCES_FILE" ]; then
   if [ "$JSON_TOOL" = "jq" ]; then
     while IFS=$'\t' read -r name marketplace; do
       echo "[+] Installing $name@$marketplace..."
-      claude plugin install "$name@$marketplace" 2>/dev/null || true
+      if ! claude plugin install "$name@$marketplace" 2>/dev/null; then
+        echo "[!] Failed to install $name@$marketplace"
+        FAILURES=$((FAILURES+1))
+      fi
     done < <(jq -r '.recommended_plugins[] | [.name, .marketplace] | @tsv' "$SOURCES_FILE")
   else
-    python3 - "$SOURCES_FILE" <<'PYEOF'
+    PLUGIN_FAILS=$(python3 - "$SOURCES_FILE" <<'PYEOF'
 import json, sys, subprocess
 with open(sys.argv[1]) as f:
     sources = json.load(f)
+fails = 0
 for p in sources.get("recommended_plugins", []):
     name, mkt = p["name"], p["marketplace"]
-    print(f"[+] Installing {name}@{mkt}...")
-    subprocess.run(["claude", "plugin", "install", f"{name}@{mkt}"],
-                   capture_output=True)
+    print(f"[+] Installing {name}@{mkt}...", file=sys.stderr)
+    r = subprocess.run(["claude", "plugin", "install", f"{name}@{mkt}"],
+                       capture_output=True)
+    if r.returncode != 0:
+        print(f"[!] Failed to install {name}@{mkt} (exit {r.returncode})", file=sys.stderr)
+        fails += 1
+print(fails)
 PYEOF
+    ) || PLUGIN_FAILS=1
+    FAILURES=$((FAILURES + ${PLUGIN_FAILS:-0}))
   fi
 fi
 
 echo ""
-echo "Done!"
+if [ "$FAILURES" -gt 0 ]; then
+  echo "Completed with $FAILURES failure(s) -- see [!] lines above."
+else
+  echo "Done!"
+fi
 echo ""
 echo "Next steps in Claude Code:"
 echo "  /plugin discover                          -> browse available plugins"
 echo "  /plugin install noxfen-essentials@noxfen  -> install skills"
 echo ""
 echo "To sync after updating sources.json, re-run this installer."
+
+[ "$FAILURES" -gt 0 ] && exit 1
+exit 0

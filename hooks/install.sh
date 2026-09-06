@@ -38,7 +38,16 @@ get_hook_file() {
   if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/$name" ]; then
     cp "$SCRIPT_DIR/$name" "$dest"
   else
-    curl -sL "$RAW_BASE/hooks/$name" -o "$dest"
+    # Temp file + --fail: an HTTP 404/500 body must never land in $dest
+    # (curl -sL exits 0 on HTTP errors and would save the error page).
+    local tmp
+    tmp=$(mktemp)
+    if curl -sSfL "$RAW_BASE/hooks/$name" -o "$tmp" && [ -s "$tmp" ]; then
+      mv "$tmp" "$dest"
+    else
+      rm -f "$tmp"
+      echo "ERROR: download of $name failed"; exit 1
+    fi
   fi
   chmod +x "$dest"
   echo "[+] Installed hook script: $name"
@@ -71,11 +80,25 @@ def add_hook(event, command):
         any(basename in h.get("command", "") for h in entry.get("hooks", []))
         for entry in data["hooks"][event]
     )
-    if not already or force:
-        data["hooks"][event].append({"hooks": [{"type": "command", "command": command}]})
-        print(f"[+] Registered hook: {event} -> {command}")
-    else:
+    if already and not force:
         print(f"[=] Hook already registered: {event}")
+        return
+    if already:
+        # --force: replace ONLY the managed command. Filter it out of each
+        # entry's inner hooks array, keep sibling commands and metadata,
+        # drop an entry only when it held nothing but the managed command.
+        new_entries = []
+        for entry in data["hooks"][event]:
+            inner = entry.get("hooks")
+            if isinstance(inner, list):
+                kept = [h for h in inner if basename not in h.get("command", "")]
+                if not kept:
+                    continue
+                entry["hooks"] = kept
+            new_entries.append(entry)
+        data["hooks"][event] = new_entries
+    data["hooks"][event].append({"hooks": [{"type": "command", "command": command}]})
+    print(f"[+] Registered hook: {event} -> {command}")
 
 docs_cmd    = f'bash "{hooks_dir}/update-docs-reminder.sh"'
 tests_cmd   = f'bash "{hooks_dir}/run-tests-on-stop.sh"'

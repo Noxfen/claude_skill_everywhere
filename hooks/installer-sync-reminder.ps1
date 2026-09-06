@@ -12,20 +12,38 @@ $lines = Get-Content $transcriptPath -Encoding utf8 -ErrorAction SilentlyContinu
 if (-not $lines) { exit 0 }
 
 # Find last REAL user prompt — only scan tool calls after it (current turn).
-# tool_result entries are also "type":"user" lines and must be excluded,
-# otherwise the anchor lands after every Write/Edit and the hook never fires.
+# Regex is a cheap prefilter (tolerant of JSON whitespace); candidates are
+# parsed as JSON so a prompt merely mentioning tool_result, or a structural
+# tool_result entry (also "type":"user"), is classified correctly.
 $lastUserIdx = -1
 for ($i = $lines.Count - 1; $i -ge 0; $i--) {
-    if ($lines[$i] -match '"type":"user"' -and $lines[$i] -notmatch '"tool_result"') { $lastUserIdx = $i; break }
+    if ($lines[$i] -notmatch '"type"\s*:\s*"user"') { continue }
+    $rec = $null
+    try { $rec = $lines[$i] | ConvertFrom-Json -ErrorAction Stop } catch {}
+    if ($rec) {
+        if ($rec.type -ne 'user') { continue }
+        $content = $rec.message?.content
+        $isToolResult = $false
+        if ($content -is [System.Array]) {
+            foreach ($c in $content) { if ($c.type -eq 'tool_result') { $isToolResult = $true; break } }
+        }
+        if (-not $isToolResult) { $lastUserIdx = $i; break }
+    } elseif ($lines[$i] -notmatch '"tool_result"') { $lastUserIdx = $i; break }
 }
 
-# Extract edited paths from Write/Edit/MultiEdit tool calls
+# Extract edited paths from Write/Edit/MultiEdit tool_use entries (JSON-parsed)
 $paths = @()
 for ($i = $lastUserIdx + 1; $i -lt $lines.Count; $i++) {
-    if ($lines[$i] -match '"name":\s*"(Write|Edit|MultiEdit)"' -and
-        $lines[$i] -match '"file_path"\s*:\s*"((?:[^"\\]|\\.)+)"') {
-        $p = $matches[1] -replace '\\\\', '\' -replace '\\"', '"'
-        $paths += $p
+    if ($lines[$i] -notmatch '"name"\s*:\s*"(Write|Edit|MultiEdit)"') { continue }
+    $rec = $null
+    try { $rec = $lines[$i] | ConvertFrom-Json -ErrorAction Stop } catch { continue }
+    $content = $rec.message?.content
+    if ($content -is [System.Array]) {
+        foreach ($c in $content) {
+            if ($c.type -eq 'tool_use' -and @('Write','Edit','MultiEdit') -contains $c.name -and $c.input?.file_path) {
+                $paths += [string]$c.input.file_path
+            }
+        }
     }
 }
 if ($paths.Count -eq 0) { exit 0 }

@@ -19,10 +19,12 @@ $file = Split-Path $path -Leaf
 $dir  = Split-Path $path -Parent
 if (-not (Test-Path $dir)) { exit 0 }
 
-function Run-Audit([string]$cmd, [string[]]$cmdArgs, [string]$label) {
+function Run-Audit([string]$cmdLine, [string]$label) {
+    # Run through cmd.exe: npm/pip-audit on Windows are .cmd/.exe shims that
+    # Process.Start(UseShellExecute=$false) with a bare name cannot launch.
     $psi = [System.Diagnostics.ProcessStartInfo]@{
-        FileName               = $cmd
-        Arguments              = $cmdArgs -join " "
+        FileName               = ($env:ComSpec ? $env:ComSpec : 'cmd.exe')
+        Arguments              = "/d /s /c `"$cmdLine`""
         WorkingDirectory       = $dir
         RedirectStandardOutput = $true
         RedirectStandardError  = $true
@@ -30,13 +32,19 @@ function Run-Audit([string]$cmd, [string[]]$cmdArgs, [string]$label) {
         CreateNoWindow         = $true
     }
     $proc = [System.Diagnostics.Process]::Start($psi)
-    $stdout = $proc.StandardOutput.ReadToEnd()
-    $stderr = $proc.StandardError.ReadToEnd()
+    # Drain both streams asynchronously BEFORE waiting: a synchronous
+    # ReadToEnd can block past the timeout (and risks pipe deadlock).
+    $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+    $stderrTask = $proc.StandardError.ReadToEndAsync()
     $finished = $proc.WaitForExit(45000)
-    if (-not $finished) { $proc.Kill(); return }
+    if (-not $finished) {
+        try { $proc.Kill($true) } catch {}
+        $proc.WaitForExit()
+        return
+    }
     if ($proc.ExitCode -ne 0) {
-        $output = "$stdout`n$stderr".Trim()
-        [Console]::Error.WriteLine("${label} found vulnerabilities in ${file}:`n$output")
+        $output = "$($stdoutTask.Result)`n$($stderrTask.Result)".Trim()
+        [Console]::Error.WriteLine("${label} reported issues for ${file}:`n$output")
         exit 2
     }
 }
@@ -45,18 +53,23 @@ switch ($file) {
     "Cargo.toml" {
         if (Get-Command "cargo" -ErrorAction SilentlyContinue) {
             $audit = cargo audit --version 2>$null
-            if ($audit) { Run-Audit "cargo" @("audit", "--quiet") "cargo audit" }
+            if ($audit) { Run-Audit "cargo audit --quiet" "cargo audit" }
         }
     }
     "package.json" {
         if (Get-Command "npm" -ErrorAction SilentlyContinue) {
-            Run-Audit "npm" @("audit", "--audit-level=high") "npm audit"
+            Run-Audit "npm audit --audit-level=high" "npm audit"
         }
     }
-    { $_ -in @("requirements.txt", "pyproject.toml") } {
+    "requirements.txt" {
+        # Audit the edited file itself (-r); auditing the active Python
+        # environment says nothing about this project's pinned deps.
+        # NB: pip-audit has no --quiet flag.
         if (Get-Command "pip-audit" -ErrorAction SilentlyContinue) {
-            Run-Audit "pip-audit" @("--quiet") "pip-audit"
+            Run-Audit "pip-audit --progress-spinner off -r `"$file`"" "pip-audit"
         }
     }
+    # pyproject.toml deliberately skipped: pip-audit cannot audit it directly
+    # and an environment audit would report an unrelated interpreter's deps.
 }
 exit 0

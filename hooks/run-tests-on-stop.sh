@@ -14,12 +14,46 @@ transcript=$(echo "$json" | python3 -c "import sys,json; print(json.load(sys.std
 [ -z "$transcript" ] || [ ! -f "$transcript" ] && exit 0
 
 # Only look at the CURRENT turn: anchor on the last real user prompt.
-# NB: tool_result entries are also "type":"user" lines, so they must be
-# excluded or the anchor lands after every Write/Edit and the scan window
-# is empty (the bug that made the sibling reminder hooks silent no-ops).
-last_user_line=$(grep -n '"type":"user"' "$transcript" 2>/dev/null | grep -v tool_result | tail -1 | cut -d: -f1)
-last_user_line=${last_user_line:-0}
-tail -n +"$((last_user_line + 1))" "$transcript" | grep -q '"name":\s*"\(Write\|Edit\)"' 2>/dev/null || exit 0
+# Lines are parsed as JSON so a structural tool_result entry (also
+# "type":"user") and a prompt that merely mentions "tool_result" are both
+# classified correctly, regardless of JSON whitespace.
+python3 - "$transcript" <<'PYEOF' 2>/dev/null || exit 0
+import json, sys
+lines = open(sys.argv[1], encoding="utf-8", errors="replace").readlines()
+anchor = -1
+for i in range(len(lines) - 1, -1, -1):
+    l = lines[i]
+    if '"user"' not in l or '"type"' not in l:
+        continue
+    try:
+        rec = json.loads(l)
+    except Exception:
+        if "tool_result" not in l:
+            anchor = i; break
+        continue
+    if rec.get("type") != "user":
+        continue
+    content = (rec.get("message") or {}).get("content")
+    if isinstance(content, list) and any(
+        isinstance(c, dict) and c.get("type") == "tool_result" for c in content
+    ):
+        continue
+    anchor = i; break
+for l in lines[anchor + 1:]:
+    if '"name"' not in l or ("Write" not in l and "Edit" not in l):
+        continue
+    try:
+        rec = json.loads(l)
+    except Exception:
+        sys.exit(0)
+    content = (rec.get("message") or {}).get("content")
+    if isinstance(content, list) and any(
+        isinstance(c, dict) and c.get("type") == "tool_use" and c.get("name") in ("Write", "Edit")
+        for c in content
+    ):
+        sys.exit(0)
+sys.exit(1)
+PYEOF
 
 workdir=$(echo "$json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('cwd',''))" 2>/dev/null)
 git_root=$(git -C "${workdir:-.}" rev-parse --show-toplevel 2>/dev/null) || exit 0
@@ -31,10 +65,18 @@ if [ -f "$git_root/Cargo.toml" ]; then
 elif [ -f "$git_root/pyproject.toml" ] || [ -f "$git_root/pytest.ini" ] || [ -f "$git_root/setup.py" ]; then
   test_cmd="python3 -m pytest --tb=short -q"
 elif [ -f "$git_root/package.json" ]; then
-  if node -e "const p=require('$git_root/package.json'); process.exit(p.scripts&&p.scripts.test?0:1)" 2>/dev/null; then
-    test_cmd="npm test -- --run"
-  elif command -v npx >/dev/null 2>&1; then
-    test_cmd="npx vitest run"
+  # Respect the project's own runner: extra flags only for a KNOWN runner
+  # (`npm test -- --run` breaks e.g. `node --test`). Fall back to vitest only
+  # when the project actually ships it -- no implicit npx download.
+  test_script=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('scripts',{}).get('test',''))" "$git_root/package.json" 2>/dev/null)
+  if [ -n "$test_script" ]; then
+    case "$test_script" in
+      *vitest*run*) test_cmd="npm test" ;;
+      *vitest*)     test_cmd="npm test -- --run" ;;
+      *)            test_cmd="npm test" ;;
+    esac
+  elif [ -x "$git_root/node_modules/.bin/vitest" ]; then
+    test_cmd="npx --no-install vitest run"
   fi
 elif [ -f "$git_root/Makefile" ] && grep -q '^test:' "$git_root/Makefile" 2>/dev/null; then
   test_cmd="make test"
@@ -46,8 +88,13 @@ fi
 first_cmd=$(echo "$test_cmd" | cut -d' ' -f1)
 command -v "$first_cmd" >/dev/null 2>&1 || exit 0
 
-# Run with timeout (60s)
-output=$(cd "$git_root" && timeout 60 sh -c "$test_cmd" 2>&1) && status=0 || status=$?
+# Run with timeout (60s). GNU `timeout` is absent on stock macOS: fall back
+# to no limit rather than mis-reporting command-not-found as a test failure.
+if command -v timeout >/dev/null 2>&1; then
+  output=$(cd "$git_root" && timeout 60 sh -c "$test_cmd" 2>&1) && status=0 || status=$?
+else
+  output=$(cd "$git_root" && sh -c "$test_cmd" 2>&1) && status=0 || status=$?
+fi
 
 # Timeout (124) is not a test failure -- mirror the PS1 version, which exits 0
 [ "$status" -eq 124 ] && exit 0

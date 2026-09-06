@@ -16,13 +16,46 @@ transcript=$(echo "$json" | python3 -c "import sys,json; print(json.load(sys.std
 [ -z "$transcript" ] || [ ! -f "$transcript" ] && exit 0
 
 # Find Write/Edit only after the last REAL user prompt (current turn only).
-# tool_result entries are also "type":"user" lines and must be excluded,
-# otherwise the anchor lands after every Write/Edit and the hook never fires.
-last_user_line=$(grep -n '"type":"user"' "$transcript" 2>/dev/null | grep -v tool_result | tail -1 | cut -d: -f1)
-last_user_line=${last_user_line:-0}
-if ! tail -n +"$((last_user_line + 1))" "$transcript" | grep -q '"name":\s*"\(Write\|Edit\)"' 2>/dev/null; then
-  exit 0
-fi
+# Lines are parsed as JSON so a structural tool_result entry (also
+# "type":"user") and a prompt that merely mentions "tool_result" are both
+# classified correctly, regardless of JSON whitespace.
+python3 - "$transcript" <<'PYEOF' 2>/dev/null || exit 0
+import json, sys
+lines = open(sys.argv[1], encoding="utf-8", errors="replace").readlines()
+anchor = -1
+for i in range(len(lines) - 1, -1, -1):
+    l = lines[i]
+    if '"user"' not in l or '"type"' not in l:
+        continue
+    try:
+        rec = json.loads(l)
+    except Exception:
+        if "tool_result" not in l:
+            anchor = i; break
+        continue
+    if rec.get("type") != "user":
+        continue
+    content = (rec.get("message") or {}).get("content")
+    if isinstance(content, list) and any(
+        isinstance(c, dict) and c.get("type") == "tool_result" for c in content
+    ):
+        continue
+    anchor = i; break
+for l in lines[anchor + 1:]:
+    if '"name"' not in l or ("Write" not in l and "Edit" not in l):
+        continue
+    try:
+        rec = json.loads(l)
+    except Exception:
+        sys.exit(0)
+    content = (rec.get("message") or {}).get("content")
+    if isinstance(content, list) and any(
+        isinstance(c, dict) and c.get("type") == "tool_use" and c.get("name") in ("Write", "Edit")
+        for c in content
+    ):
+        sys.exit(0)
+sys.exit(1)
+PYEOF
 
 workdir=$(echo "$json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('cwd',''))" 2>/dev/null)
 git_root=$(git -C "${workdir:-.}" rev-parse --show-toplevel 2>/dev/null) || exit 0

@@ -21,14 +21,24 @@ Write-Host "claude_skill_everywhere installer" -ForegroundColor Cyan
 Write-Host "===================================" -ForegroundColor Cyan
 Write-Host ""
 
+# Track failures so the final exit code is honest.
+$Failures = [System.Collections.Generic.List[string]]::new()
+
 if (-not (Test-Path $Settings)) {
-    Write-Host "ERROR: $Settings not found. Is Claude Code installed?" -ForegroundColor Red
-    exit 1
+    Write-Host "[+] $Settings not found -- creating a minimal one" -ForegroundColor Yellow
+    New-Item -ItemType Directory -Force -Path $ClaudeDir | Out-Null
+    Set-Content $Settings '{}' -Encoding utf8
 }
 
 $json = Get-Content $Settings -Raw | ConvertFrom-Json
+if ($null -eq $json) { $json = [PSCustomObject]@{} }
 
-$json.extraKnownMarketplaces ??= [PSCustomObject]@{}
+# NB: `$json.prop ??= ...` cannot CREATE a property on a PSCustomObject --
+# it throws "The property ... cannot be found" when the key is absent
+# (e.g. a fresh `{}` settings file). Add-Member is required.
+if (-not ($json.PSObject.Properties.Name -contains 'extraKnownMarketplaces')) {
+    $json | Add-Member -NotePropertyName extraKnownMarketplaces -NotePropertyValue ([PSCustomObject]@{})
+}
 
 # Register this repo as marketplace
 $thisSource = [PSCustomObject]@{ source = [PSCustomObject]@{ source = "github"; repo = "$RepoOwner/$RepoName" } }
@@ -84,12 +94,18 @@ $KnownMarkets = Join-Path $PluginsDir "known_marketplaces.json"
 if (-not (Test-Path $MarketDir)) {
     Write-Host "[+] Cloning marketplace repo..." -ForegroundColor Green
     git clone "https://github.com/$RepoOwner/$RepoName.git" $MarketDir 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $MarketDir)) {
+        $Failures.Add("git clone marketplace repo (exit $LASTEXITCODE)")
+        Write-Host "[!] Marketplace clone failed" -ForegroundColor Yellow
+    }
 } else {
     Write-Host "[=] Updating marketplace repo..." -ForegroundColor Yellow
     git -C $MarketDir pull --ff-only --quiet 2>$null
+    if ($LASTEXITCODE -ne 0) { Write-Host "[!] Marketplace pull failed (exit $LASTEXITCODE)" -ForegroundColor Yellow }
 }
 
-if (Test-Path $KnownMarkets) {
+# Register only a clone that actually exists.
+if ((Test-Path $KnownMarkets) -and (Test-Path $MarketDir)) {
     $km = Get-Content $KnownMarkets -Raw | ConvertFrom-Json
     if (-not ($km.PSObject.Properties.Name -contains $MarketKey) -or $Force) {
         $km | Add-Member -NotePropertyName $MarketKey -NotePropertyValue ([PSCustomObject]@{
@@ -102,45 +118,32 @@ if (Test-Path $KnownMarkets) {
     }
 }
 
-# Install statusline
-$statuslineInstaller = $PSScriptRoot ? (Join-Path $PSScriptRoot "statusline\install.ps1") : $null
-try {
-    if ($statuslineInstaller -and (Test-Path $statuslineInstaller)) {
-        pwsh -NoProfile -File $statuslineInstaller
-    } else {
-        $tmp = Join-Path $env:TEMP "noxfen-statusline-install.ps1"
-        Invoke-WebRequest "$RawBase/statusline/install.ps1" -OutFile $tmp
-        pwsh -NoProfile -File $tmp
-        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+# Sub-installers: run local copy or download; propagate real exit codes.
+function Invoke-SubInstaller([string]$label, [string]$localRel, [string]$remoteRel, [string[]]$extraArgs = @()) {
+    $local = $PSScriptRoot ? (Join-Path $PSScriptRoot $localRel) : $null
+    try {
+        if ($local -and (Test-Path $local)) {
+            pwsh -NoProfile -File $local @extraArgs
+        } else {
+            $tmp = Join-Path $env:TEMP "noxfen-$label-install.ps1"
+            Invoke-WebRequest "$RawBase/$remoteRel" -OutFile $tmp
+            pwsh -NoProfile -File $tmp @extraArgs
+            Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+        }
+        if ($LASTEXITCODE -ne 0) {
+            $script:Failures.Add("$label installer (exit $LASTEXITCODE)")
+            Write-Host "[!] $label installer failed (exit $LASTEXITCODE)" -ForegroundColor Yellow
+        }
+    } catch {
+        $script:Failures.Add("$label installer ($($_.Exception.Message))")
+        Write-Host "[!] $label installer failed: $_" -ForegroundColor Yellow
     }
-} catch { Write-Host "[!] Statusline installer failed: $_" -ForegroundColor Yellow }
+}
 
-# Install MCP servers
-$mcpInstaller = $PSScriptRoot ? (Join-Path $PSScriptRoot "mcp\install.ps1") : $null
-try {
-    if ($mcpInstaller -and (Test-Path $mcpInstaller)) {
-        pwsh -NoProfile -File $mcpInstaller
-    } else {
-        $tmp = Join-Path $env:TEMP "noxfen-mcp-install.ps1"
-        Invoke-WebRequest "$RawBase/mcp/install.ps1" -OutFile $tmp
-        pwsh -NoProfile -File $tmp
-        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
-    }
-} catch { Write-Host "[!] MCP installer failed: $_" -ForegroundColor Yellow }
-
-# Install hooks
-$hooksInstaller = $PSScriptRoot ? (Join-Path $PSScriptRoot "hooks\install.ps1") : $null
-try {
-    if ($hooksInstaller -and (Test-Path $hooksInstaller)) {
-        $forceArg = $Force ? @("-Force") : @()
-        pwsh -NoProfile -File $hooksInstaller @forceArg
-    } else {
-        $tmp = Join-Path $env:TEMP "noxfen-hooks-install.ps1"
-        Invoke-WebRequest "$RawBase/hooks/install.ps1" -OutFile $tmp
-        pwsh -NoProfile -File $tmp
-        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
-    }
-} catch { Write-Host "[!] Hook installer failed: $_" -ForegroundColor Yellow }
+$forceArg = $Force ? @("-Force") : @()
+Invoke-SubInstaller "statusline" "statusline\install.ps1" "statusline/install.ps1"
+Invoke-SubInstaller "mcp"        "mcp\install.ps1"        "mcp/install.ps1"
+Invoke-SubInstaller "hooks"      "hooks\install.ps1"      "hooks/install.ps1" $forceArg
 
 # Install recommended plugins
 # NOTE: ($sourcesJson -and ...), NOT ($sourcesJson?.x) -- see external marketplaces note above.
@@ -152,18 +155,34 @@ if ($sourcesJson -and $sourcesJson.recommended_plugins) {
         Write-Host "[+] Installing $pluginId..." -ForegroundColor Green
         # try/catch so one failing install can't abort the loop under
         # $PSNativeCommandUseErrorActionPreference + $ErrorActionPreference='Stop'.
-        try { claude plugin install $pluginId 2>$null }
-        catch { Write-Host "[!] Failed to install $pluginId`: $_" -ForegroundColor Yellow }
+        try {
+            claude plugin install $pluginId 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                $Failures.Add("plugin $pluginId (exit $LASTEXITCODE)")
+                Write-Host "[!] Failed to install $pluginId (exit $LASTEXITCODE)" -ForegroundColor Yellow
+            }
+        }
+        catch {
+            $Failures.Add("plugin $pluginId ($($_.Exception.Message))")
+            Write-Host "[!] Failed to install $pluginId`: $_" -ForegroundColor Yellow
+        }
     }
 } else {
     Write-Host "[=] No recommended plugins in sources.json" -ForegroundColor DarkGray
 }
 
 Write-Host ""
-Write-Host "Done!" -ForegroundColor Cyan
+if ($Failures.Count -gt 0) {
+    Write-Host "Completed with $($Failures.Count) failure(s):" -ForegroundColor Yellow
+    foreach ($f in $Failures) { Write-Host "  - $f" -ForegroundColor Yellow }
+} else {
+    Write-Host "Done!" -ForegroundColor Cyan
+}
 Write-Host ""
 Write-Host "Next steps in Claude Code:" -ForegroundColor Gray
 Write-Host "  /plugin discover                          -> browse available plugins" -ForegroundColor Gray
 Write-Host "  /plugin install noxfen-essentials@noxfen  -> install skills" -ForegroundColor Gray
 Write-Host ""
 Write-Host "To sync after updating sources.json, re-run this installer." -ForegroundColor Gray
+
+exit ($Failures.Count -gt 0 ? 1 : 0)

@@ -15,9 +15,11 @@ $ext = [System.IO.Path]::GetExtension($file).TrimStart('.').ToLower()
 
 function Has-Command([string]$cmd) { [bool](Get-Command $cmd -ErrorAction SilentlyContinue) }
 
-function Run-Format([string]$cmd, [string[]]$args) {
+# NB: the parameter must NOT be named $args -- that collides with the
+# automatic $args variable and every call would receive ZERO arguments.
+function Run-Format([string]$cmd, [string[]]$commandArgs) {
     if (-not (Has-Command $cmd)) { return }
-    & $cmd @args 2>$null
+    & $cmd @commandArgs 2>$null
     if ($LASTEXITCODE -eq 0) { Write-Output "[lint] formatted: $file" }
 }
 
@@ -34,13 +36,25 @@ switch ($ext) {
         Run-Format "ruff" @("format", $file)
         if (Has-Command "ruff") { ruff check --fix --quiet $file 2>$null }
     }
-    { $_ -in @("js","mjs","cjs","ts","tsx","jsx") } {
+    { $_ -in @("js","mjs","cjs","ts","tsx","jsx","svelte") } {
         $root = git -C (Split-Path $file -Parent) rev-parse --show-toplevel 2>$null
         if ($LASTEXITCODE -eq 0 -and $root) {
-            $hasPrettier = (Test-Path "$root/.prettierrc") -or (Test-Path "$root/prettier.config.js") -or (Test-Path "$root/prettier.config.ts")
-            $hasEslint   = (Test-Path "$root/eslint.config.js") -or (Test-Path "$root/.eslintrc.js") -or (Test-Path "$root/.eslintrc.json")
-            if ($hasPrettier) { Run-Format "prettier" @("--write", $file) }
-            if ($hasEslint)   { Run-Format "eslint"   @("--fix", "--quiet", $file) }
+            $hasPrettier = @(".prettierrc",".prettierrc.json",".prettierrc.yaml",".prettierrc.yml","prettier.config.js","prettier.config.mjs","prettier.config.ts") |
+                Where-Object { Test-Path (Join-Path $root $_) } | Select-Object -First 1
+            $hasEslint   = @("eslint.config.js","eslint.config.mjs","eslint.config.ts",".eslintrc.js",".eslintrc.cjs",".eslintrc.json") |
+                Where-Object { Test-Path (Join-Path $root $_) } | Select-Object -First 1
+            # Prefer the project's own binaries over globals -- most projects
+            # install formatters only in node_modules/.bin.
+            $localPrettier = Join-Path $root "node_modules\.bin\prettier.cmd"
+            $localEslint   = Join-Path $root "node_modules\.bin\eslint.cmd"
+            if ($hasPrettier) {
+                if (Test-Path $localPrettier) { Run-Format $localPrettier @("--write", $file) }
+                else                          { Run-Format "prettier"     @("--write", $file) }
+            }
+            if ($hasEslint) {
+                if (Test-Path $localEslint) { Run-Format $localEslint @("--fix", "--quiet", $file) }
+                else                        { Run-Format "eslint"     @("--fix", "--quiet", $file) }
+            }
         }
     }
     { $_ -in @("c","h","cpp","hpp","cc","cxx") } { Run-Format "clang-format" @("-i", $file) }

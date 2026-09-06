@@ -77,4 +77,4 @@ add_http svelte https://mcp.svelte.dev/mcp
 
 echo ""
 echo "Done. Restart Claude Code to activate MCP servers."
-echo "GitHub MCP needs GITHUB_TOKEN env var set."
+echo "GitHub MCP needs GITHUB_PERSONAL_ACCESS_TOKEN env var set."

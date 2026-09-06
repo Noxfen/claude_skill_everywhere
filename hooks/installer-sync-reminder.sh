@@ -13,29 +13,46 @@ fi
 transcript=$(echo "$json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null)
 [ -z "$transcript" ] || [ ! -f "$transcript" ] && exit 0
 
-# Find last REAL user prompt line number.
-# tool_result entries are also "type":"user" lines and must be excluded,
-# otherwise the anchor lands after every Write/Edit and the hook never fires.
-last_user_line=$(grep -n '"type":"user"' "$transcript" 2>/dev/null | grep -v tool_result | tail -1 | cut -d: -f1)
-last_user_line=${last_user_line:-0}
-
-# Extract edited paths from Write/Edit/MultiEdit tool_use after last user message
-paths=$(tail -n +"$((last_user_line + 1))" "$transcript" | python3 -c '
-import sys, json
-for line in sys.stdin:
+# Anchor on the last REAL user prompt (JSON-parsed: a structural tool_result
+# entry is also "type":"user", and a prompt may merely MENTION tool_result),
+# then extract edited paths from Write/Edit/MultiEdit tool_use after it.
+paths=$(python3 - "$transcript" <<'PYEOF' 2>/dev/null
+import json, sys
+lines = open(sys.argv[1], encoding="utf-8", errors="replace").readlines()
+anchor = -1
+for i in range(len(lines) - 1, -1, -1):
+    l = lines[i]
+    if '"user"' not in l or '"type"' not in l:
+        continue
     try:
-        e = json.loads(line)
-        msg = e.get("message", {})
-        content = msg.get("content") or []
-        if not isinstance(content, list):
-            continue
-        for c in content:
-            if isinstance(c, dict) and c.get("type") == "tool_use" and c.get("name") in ("Write","Edit","MultiEdit"):
-                fp = (c.get("input") or {}).get("file_path")
-                if fp: print(fp)
+        rec = json.loads(l)
     except Exception:
-        pass
-')
+        if "tool_result" not in l:
+            anchor = i; break
+        continue
+    if rec.get("type") != "user":
+        continue
+    content = (rec.get("message") or {}).get("content")
+    if isinstance(content, list) and any(
+        isinstance(c, dict) and c.get("type") == "tool_result" for c in content
+    ):
+        continue
+    anchor = i; break
+for l in lines[anchor + 1:]:
+    try:
+        e = json.loads(l)
+    except Exception:
+        continue
+    content = (e.get("message") or {}).get("content")
+    if not isinstance(content, list):
+        continue
+    for c in content:
+        if isinstance(c, dict) and c.get("type") == "tool_use" and c.get("name") in ("Write", "Edit", "MultiEdit"):
+            fp = (c.get("input") or {}).get("file_path")
+            if fp:
+                print(fp)
+PYEOF
+)
 
 [ -z "$paths" ] && exit 0
 

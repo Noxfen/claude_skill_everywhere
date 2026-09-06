@@ -59,6 +59,8 @@ fetch(url)
 async function loadData(url: string): Promise<Data> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  // NB: the cast only asserts the type -- it validates nothing at runtime.
+  // For untrusted APIs parse with a schema (e.g. zod: DataSchema.parse(await response.json())).
   return response.json() as Promise<Data>;
 }
 ```

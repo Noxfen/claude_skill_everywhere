@@ -26,12 +26,20 @@ Write-Host "[+] Deployed statusline-command.ps1" -ForegroundColor Green
 
 # Patch settings.json
 $json = Get-Content $Settings -Raw | ConvertFrom-Json
+if ($null -eq $json) { $json = [PSCustomObject]@{} }
 $cmd  = "pwsh -NoProfile -File `"$DestScript`""
 
-$json.statusLine ??= [PSCustomObject]@{}
-$json.statusLine | Add-Member -NotePropertyName "type"            -NotePropertyValue "command"   -Force
-$json.statusLine | Add-Member -NotePropertyName "command"         -NotePropertyValue $cmd         -Force
-$json.statusLine | Add-Member -NotePropertyName "refreshInterval" -NotePropertyValue 60           -Force
+# NB: `??=` cannot CREATE a property on a PSCustomObject -- it throws when
+# the key is absent (fresh `{}` settings). Add-Member is required.
+if (-not ($json.PSObject.Properties.Name -contains 'statusLine')) {
+    $json | Add-Member -NotePropertyName statusLine -NotePropertyValue ([PSCustomObject]@{})
+}
+$json.statusLine | Add-Member -NotePropertyName "type"    -NotePropertyValue "command" -Force
+$json.statusLine | Add-Member -NotePropertyName "command" -NotePropertyValue $cmd      -Force
+# Set a default refresh only when the user has not chosen one.
+if (-not ($json.statusLine.PSObject.Properties.Name -contains 'refreshInterval')) {
+    $json.statusLine | Add-Member -NotePropertyName "refreshInterval" -NotePropertyValue 60
+}
 
 $json | ConvertTo-Json -Depth 10 | Set-Content $Settings -Encoding utf8
 Write-Host "[+] settings.json updated (statusLine -> pwsh)" -ForegroundColor Green

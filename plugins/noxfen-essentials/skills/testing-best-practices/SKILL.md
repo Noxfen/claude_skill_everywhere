@@ -233,11 +233,12 @@ int main(void) {
 ```
 
 ```makefile
+# NB: recipe lines MUST start with a real TAB, not spaces ("missing separator")
 test: test_parser
-    ./test_parser
+	./test_parser
 
 test_parser: test_parser.c parser.c unity/unity.c
-    gcc -Iunity -Wall -Wextra -o test_parser test_parser.c parser.c unity/unity.c
+	gcc -Iunity -Wall -Wextra -o test_parser test_parser.c parser.c unity/unity.c
 ```
 
 Use `-fsanitize=address,undefined` in test builds to catch memory errors during tests.
@@ -249,10 +250,10 @@ Use `-fsanitize=address,undefined` in test builds to catch memory errors during 
 Use `bats-core`:
 ```bash
 # test_script.bats
-@test "script outputs hello" {
-  run ./myscript.sh
+@test "script outputs greeting for a name" {
+  run ./myscript.sh world
   [ "$status" -eq 0 ]
-  [ "$output" = "hello" ]
+  [ "$output" = "hello world" ]
 }
 
 @test "script fails on missing arg" {
