@@ -193,6 +193,23 @@ sources.json                <- external marketplaces + recommended plugins
 install.ps1 / .sh          <- root one-shot installer
 ```
 
+## Testing
+
+Regression suite for installers, hooks and statusline. Every test runs against a throwaway
+`CLAUDE_CONFIG_DIR` — your real `~/.claude` is never touched. CI runs both on every push
+(`.github/workflows/test.yml`, Windows + Ubuntu).
+
+```powershell
+# Windows
+pwsh -NoProfile -File tests\run-tests.ps1
+```
+```bash
+# Linux/WSL
+bash tests/run-tests.sh
+```
+
+Tests needing `node`/`npm`/`git`/`jq` skip themselves when the tool is absent.
+
 ## Add a new skill
 
 1. Create `plugins/noxfen-essentials/skills/<name>/SKILL.md`

@@ -31,6 +31,8 @@ statusline/
   install.ps1 / install.sh   <- deploys statusline + patches settings.json
 sources.json                 <- external marketplaces + recommended plugins to register on install
 install.ps1 / install.sh     <- root one-shot installer (marketplace + statusline + MCP + hooks + plugins)
+tests/
+  run-tests.ps1 / .sh        <- regression suite (isolated CLAUDE_CONFIG_DIR fixtures); run by .github/workflows/test.yml
 ```
 
 ## Adding a new skill
@@ -64,6 +66,7 @@ Edit `sources.json` → add entry to `external_marketplaces` → commit + push �
 - Hooks: always exit 0 unless returning feedback to Claude (exit 2 = inject message via **stderr**, not stdout)
 - Skills: description field drives when Claude auto-activates the skill — be specific
 - Dependencies: python3 required by hooks and the hooks/statusline installers; jq required by `statusline-command.sh`; `install.sh` uses jq with python3 fallback
+- Tests: after changing any installer or hook, run `pwsh -NoProfile -File tests\run-tests.ps1` and/or `bash tests/run-tests.sh` — they never touch the real `~/.claude`. Add a case for every bug fixed.
 
 ## Install (one-liner)
 
