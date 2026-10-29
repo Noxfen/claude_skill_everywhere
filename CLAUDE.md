@@ -24,7 +24,7 @@ hooks/                       <- hook scripts + installers
   branch-context-injector.*  <- UserPromptSubmit: inject git branch + dirty count into prompts
   installer-sync-reminder.*  <- Stop: remind to update install.* if hooks/mcp/statusline/sources.json edited
 mcp/
-  install.ps1 / install.sh   <- installs MCP servers (filesystem, git, fetch, github, svelte)
+  install.ps1 / install.sh   <- installs MCP servers (filesystem, git, fetch, github, svelte; rea if installed)
   README.md
 statusline/
   statusline-command.ps1/.sh <- 5h/7d rate-limit bars for Claude Code statusline

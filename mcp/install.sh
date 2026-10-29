@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # MCP server installer (Linux/macOS/WSL)
-# Installs: filesystem, git, fetch, github, svelte at user scope
+# Installs: filesystem, git, fetch, github, svelte (+ rea when installed) at user scope
 #
 # Usage: bash mcp/install.sh
 
@@ -71,6 +71,14 @@ add_stdio filesystem npx -y @modelcontextprotocol/server-filesystem "$USER_HOME"
 add_stdio git        uvx --with 'mcp<2' mcp-server-git
 add_stdio fetch      uvx --with 'mcp<2' mcp-server-fetch
 add_stdio github     npx -y @modelcontextprotocol/server-github
+
+# rea (reverse-engineering MCP, npm package rea-agents, MIT). Registered only
+# when already installed -- the installer never runs third-party npm code.
+if command -v rea >/dev/null 2>&1; then
+  add_stdio rea rea mcp
+else
+  echo "[-] rea not installed -- skipping (install: npm install -g rea-agents)"
+fi
 
 # HTTP transport servers
 add_http svelte https://mcp.svelte.dev/mcp

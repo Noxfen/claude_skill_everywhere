@@ -17,7 +17,7 @@ bash <(curl -sL https://raw.githubusercontent.com/Noxfen/claude_skill_everywhere
 
 The installer does:
 1. Registers `noxfen` marketplace + external marketplaces from `sources.json`
-2. Installs MCP servers: `filesystem`, `git`, `fetch`, `github`, `svelte`
+2. Installs MCP servers: `filesystem`, `git`, `fetch`, `github`, `svelte` (+ `rea` if already installed)
 3. Installs 8 hooks: `lint-on-edit`, `dep-audit` (PostToolUse) · `update-docs-reminder`, `run-tests-on-stop`, `installer-sync-reminder` (Stop) · `auto-sync` (SessionStart) · `unsafe-rust-blocker` (PreToolUse) · `branch-context-injector` (UserPromptSubmit)
 4. Installs statusline script (5h/7d rate-limit bars)
 5. Installs every plugin listed in `sources.json` → `recommended_plugins` (~15 plugins from the registered marketplaces)
@@ -118,6 +118,7 @@ Install in Claude Code after running the installer:
 | `fetch` | `uvx --with 'mcp<2' mcp-server-fetch` | Fetch a URL and return its content (no method/body parameters) |
 | `github` | `npx @modelcontextprotocol/server-github` | Issues, PRs, branches (needs `GITHUB_PERSONAL_ACCESS_TOKEN`) |
 | `svelte` | HTTP `https://mcp.svelte.dev/mcp` | Official Svelte/SvelteKit docs + Svelte 5 runes |
+| `rea` | `rea mcp` (Windows: via WSL if not native) | Reverse engineering of binaries, apps, web bundles — registered only if `rea-agents` is installed |
 
 **GitHub MCP token** — set before starting Claude Code:
 ```powershell

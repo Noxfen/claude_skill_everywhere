@@ -1,6 +1,6 @@
 #Requires -Version 7.0
 #!/usr/bin/env pwsh
-# MCP server installer -- installs filesystem, git, fetch, github, svelte at user scope
+# MCP server installer -- installs filesystem, git, fetch, github, svelte (+ rea when installed) at user scope
 #
 # Usage: pwsh -File mcp\install.ps1
 
@@ -47,6 +47,36 @@ foreach ($s in $Servers) {
             $failed += $s.name
             Write-Host "[!] Failed to add $($s.name) (exit $LASTEXITCODE)" -ForegroundColor Yellow
         }
+    }
+}
+
+# rea (reverse-engineering MCP, npm package rea-agents, MIT). Registered only
+# when already installed -- the installer never runs third-party npm code.
+# Native Windows install wins; otherwise use a WSL install (distro from
+# CLAUDE_SKILL_REA_WSL_DISTRO, else the default WSL distro).
+if ($existingMcp -contains "rea") {
+    Write-Host "[=] Already configured: rea" -ForegroundColor Yellow
+} else {
+    $reaArgs = $null
+    if (Get-Command rea -ErrorAction SilentlyContinue) {
+        $reaCmd = "rea"; $reaArgs = @("mcp")
+    } elseif (Get-Command wsl.exe -ErrorAction SilentlyContinue) {
+        $distroArgs = $env:CLAUDE_SKILL_REA_WSL_DISTRO ? @("-d", $env:CLAUDE_SKILL_REA_WSL_DISTRO) : @()
+        wsl.exe @distroArgs -- bash -lc "command -v rea" *> $null
+        if ($LASTEXITCODE -eq 0) {
+            $reaCmd = "wsl.exe"; $reaArgs = $distroArgs + @("--", "bash", "-lc", "exec rea mcp")
+        }
+    }
+    if ($reaArgs) {
+        claude mcp add --scope user rea -- $reaCmd @reaArgs 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[+] rea: $reaCmd $($reaArgs -join ' ')" -ForegroundColor Green
+        } else {
+            $failed += "rea"
+            Write-Host "[!] Failed to add rea (exit $LASTEXITCODE)" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "[-] rea not installed (Windows or WSL) -- skipping (install: npm install -g rea-agents)" -ForegroundColor DarkGray
     }
 }
 
