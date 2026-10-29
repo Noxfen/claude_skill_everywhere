@@ -66,6 +66,7 @@ Edit `sources.json` → add entry to `external_marketplaces` → commit + push �
 - Hooks: always exit 0 unless returning feedback to Claude (exit 2 = inject message via **stderr**, not stdout)
 - Skills: description field drives when Claude auto-activates the skill — be specific
 - Dependencies: python3 required by hooks and the hooks/statusline installers; jq required by `statusline-command.sh`; `install.sh` uses jq with python3 fallback
+- PowerShell JSON: read `~/.claude.json` and transcript lines with `ConvertFrom-Json -AsHashtable` — plain `ConvertFrom-Json` throws on keys that differ only by case (e.g. `D:/dev/x` vs `d:/dev/x` project paths), which has broken both hooks and installers
 - Tests: after changing any installer or hook, run `pwsh -NoProfile -File tests\run-tests.ps1` and/or `bash tests/run-tests.sh` — they never touch the real `~/.claude`. Add a case for every bug fixed.
 
 ## Install (one-liner)
