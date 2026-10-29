@@ -88,6 +88,18 @@ EOF
 echo "{\"transcript_path\":\"$(native "$FX/spaced.jsonl")\",\"cwd\":\"$ROOT_N\"}" | bash "$DOCS" >/dev/null 2>&1; rc=$?
 [ "$rc" -eq 2 ]; assert $? "fires on whitespace-formatted JSON"
 
+# Regression (Oct 2026): api-request-blob records replay the WHOLE history,
+# including old Edit tool_use blocks -- they must not count as current edits.
+cat > "$FX/blob.jsonl" <<'EOF'
+{"type":"user","message":{"content":"check for news, no edits"}}
+{"type":"api-request-blob","sessionId":"s","hash":"h","message":{"role":"assistant","content":[{"type":"tool_use","name":"Edit","input":{"file_path":"hooks/x.sh"}}]}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"nothing changed"}]}}
+EOF
+echo "{\"transcript_path\":\"$(native "$FX/blob.jsonl")\",\"cwd\":\"$ROOT_N\"}" | bash "$DOCS" >/dev/null 2>&1; rc=$?
+[ "$rc" -eq 0 ]; assert $? "ignores tool_use replayed inside api-request-blob records"
+echo "{\"transcript_path\":\"$(native "$FX/blob.jsonl")\",\"cwd\":\"$ROOT_N\"}" | bash "$REPO_ROOT/hooks/installer-sync-reminder.sh" >/dev/null 2>&1; rc=$?
+[ "$rc" -eq 0 ]; assert $? "installer-sync-reminder also ignores api-request-blob replays"
+
 # ------------------------------------------------------------- unsafe-rust
 echo "== unsafe-rust-blocker =="
 RUST="$REPO_ROOT/hooks/unsafe-rust-blocker.sh"

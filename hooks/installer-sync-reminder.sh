@@ -43,6 +43,10 @@ for l in lines[anchor + 1:]:
         e = json.loads(l)
     except Exception:
         continue
+    # Only real assistant turns carry tool_use. Other record types (e.g.
+    # api-request-blob) replay the WHOLE history and would resurrect old edits.
+    if e.get("type") != "assistant":
+        continue
     content = (e.get("message") or {}).get("content")
     if not isinstance(content, list):
         continue

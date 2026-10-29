@@ -34,7 +34,10 @@ $hasEdit = $false
 for ($i = $lastUserIdx + 1; $i -lt $lines.Count; $i++) {
     if ($lines[$i] -notmatch '"name"\s*:\s*"(Write|Edit)"') { continue }
     $rec = $null
-    try { $rec = $lines[$i] | ConvertFrom-Json -ErrorAction Stop } catch { $hasEdit = $true; break }
+    try { $rec = $lines[$i] | ConvertFrom-Json -ErrorAction Stop } catch { continue }
+    # Only real assistant turns carry tool_use. Other record types (e.g.
+    # api-request-blob) replay the WHOLE history and would resurrect old edits.
+    if ($rec.type -ne 'assistant') { continue }
     $content = $rec.message?.content
     if ($content -is [System.Array]) {
         foreach ($c in $content) {

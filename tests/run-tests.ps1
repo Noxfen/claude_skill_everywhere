@@ -86,6 +86,20 @@ $tSp = Join-Path $Fx "spaced.jsonl"
 "{`"transcript_path`":`"$(U $tSp)`",`"cwd`":`"$(U $RepoRoot)`"}" | pwsh -NoProfile -File $docsHook 2>$null
 Assert ($LASTEXITCODE -eq 2) "fires on whitespace-formatted JSON"
 
+# Regression (Oct 2026): api-request-blob records replay the WHOLE history,
+# including old Edit tool_use blocks -- they must not count as current edits.
+$tBlob = Join-Path $Fx "blob.jsonl"
+@'
+{"type":"user","message":{"content":"check for news, no edits"}}
+{"type":"api-request-blob","sessionId":"s","hash":"h","message":{"role":"assistant","content":[{"type":"tool_use","name":"Edit","input":{"file_path":"hooks/x.sh"}}]}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"nothing changed"}]}}
+'@ | Set-Content $tBlob -Encoding utf8
+"{`"transcript_path`":`"$(U $tBlob)`",`"cwd`":`"$(U $RepoRoot)`"}" | pwsh -NoProfile -File $docsHook 2>$null
+Assert ($LASTEXITCODE -eq 0) "ignores tool_use replayed inside api-request-blob records"
+$syncHook = Join-Path $RepoRoot "hooks\installer-sync-reminder.ps1"
+"{`"transcript_path`":`"$(U $tBlob)`",`"cwd`":`"$(U $RepoRoot)`"}" | pwsh -NoProfile -File $syncHook 2>$null
+Assert ($LASTEXITCODE -eq 0) "installer-sync-reminder also ignores api-request-blob replays"
+
 # ------------------------------------------------------------- unsafe-rust
 Write-Host "== unsafe-rust-blocker =="
 $rustHook = Join-Path $RepoRoot "hooks\unsafe-rust-blocker.ps1"
