@@ -88,17 +88,42 @@ Assert ($LASTEXITCODE -eq 2) "fires on whitespace-formatted JSON"
 
 # Regression (Oct 2026): api-request-blob records replay the WHOLE history,
 # including old Edit tool_use blocks -- they must not count as current edits.
-$tBlob = Join-Path $Fx "blob.jsonl"
-@'
-{"type":"user","message":{"content":"check for news, no edits"}}
-{"type":"api-request-blob","sessionId":"s","hash":"h","message":{"role":"assistant","content":[{"type":"tool_use","name":"Edit","input":{"file_path":"hooks/x.sh"}}]}}
-{"type":"assistant","message":{"content":[{"type":"text","text":"nothing changed"}]}}
-'@ | Set-Content $tBlob -Encoding utf8
-"{`"transcript_path`":`"$(U $tBlob)`",`"cwd`":`"$(U $RepoRoot)`"}" | pwsh -NoProfile -File $docsHook 2>$null
-Assert ($LASTEXITCODE -eq 0) "ignores tool_use replayed inside api-request-blob records"
+# Paths in these fixtures must be ABSOLUTE under the repo root, otherwise
+# installer-sync-reminder ignores them for an unrelated reason and the test
+# cannot fail.
+$hookPath = U (Join-Path $RepoRoot "hooks\x.sh")
+function Write-Fixture([string]$name, [string]$body) {
+    $p = Join-Path $Fx $name
+    $body.Replace('__HOOK__', $hookPath) | Set-Content $p -Encoding utf8
+    return $p
+}
+function Invoke-StopHook([string]$hook, [string]$transcript, [string]$cwd = $RepoRoot) {
+    "{`"transcript_path`":`"$(U $transcript)`",`"cwd`":`"$(U $cwd)`"}" | pwsh -NoProfile -File $hook 2>$null | Out-Null
+    return $LASTEXITCODE
+}
 $syncHook = Join-Path $RepoRoot "hooks\installer-sync-reminder.ps1"
-"{`"transcript_path`":`"$(U $tBlob)`",`"cwd`":`"$(U $RepoRoot)`"}" | pwsh -NoProfile -File $syncHook 2>$null
-Assert ($LASTEXITCODE -eq 0) "installer-sync-reminder also ignores api-request-blob replays"
+$BLOB = '{"type":"api-request-blob","sessionId":"s","hash":"h","message":{"role":"assistant","content":[{"type":"tool_use","name":"Edit","input":{"file_path":"__HOOK__"}}]}}'
+$REAL = '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"__HOOK__"}}]}}'
+
+$tBlob = Write-Fixture "blob.jsonl" (@('{"type":"user","message":{"content":"check for news, no edits"}}', $BLOB, '{"type":"assistant","message":{"content":[{"type":"text","text":"nothing changed"}]}}') -join "`n")
+Assert ((Invoke-StopHook $docsHook $tBlob) -eq 0) "ignores tool_use replayed inside api-request-blob records"
+Assert ((Invoke-StopHook $syncHook $tBlob) -eq 0) "installer-sync-reminder ignores api-request-blob replays"
+
+$tBlobReal = Write-Fixture "blob-real.jsonl" (@('{"type":"user","message":{"content":"edit a hook"}}', $BLOB, $REAL) -join "`n")
+Assert ((Invoke-StopHook $syncHook $tBlobReal) -eq 2) "installer-sync-reminder fires on a real edit next to a blob (positive control)"
+Assert ((Invoke-StopHook $docsHook $tBlobReal) -eq 2) "update-docs fires on a real edit next to a blob"
+
+$tMeta = Write-Fixture "meta.jsonl" (@('{"type":"user","message":{"content":"edit a hook"}}', $REAL, '{"type":"user","isMeta":true,"message":{"content":[{"type":"text","text":"Base directory for this skill: ..."}]}}') -join "`n")
+Assert ((Invoke-StopHook $syncHook $tMeta) -eq 2) "isMeta user records (Skill body) are not taken as the turn anchor"
+
+$tTrunc = Write-Fixture "trunc.jsonl" (@('{"type":"user","message":{"content":"edit"}}', '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit","inp', $REAL) -join "`n")
+Assert ((Invoke-StopHook $docsHook $tTrunc) -eq 2) "a truncated line does not hide a later real edit"
+
+$tCase = Write-Fixture "casedup.jsonl" (@('{"type":"user","message":{"content":"edit"}}', '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"__HOOK__","a":1,"A":2}}]}}') -join "`n")
+Assert ((Invoke-StopHook $syncHook $tCase) -eq 2) "valid JSON with case-duplicate keys is still parsed (-AsHashtable)"
+
+$tMulti = Write-Fixture "multi.jsonl" (@('{"type":"user","message":{"content":"edit"}}', '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"MultiEdit","input":{"file_path":"__HOOK__","edits":[]}}]}}') -join "`n")
+Assert ((Invoke-StopHook $docsHook $tMulti) -eq 2) "MultiEdit counts as an edit"
 
 # ------------------------------------------------------------- unsafe-rust
 Write-Host "== unsafe-rust-blocker =="
@@ -153,6 +178,11 @@ if ($haveNode) {
     $errOut = "{`"transcript_path`":`"$(U $tCur)`",`"cwd`":`"$(U $proj)`"}" | pwsh -NoProfile -File $testsHook 2>&1
     Assert ($LASTEXITCODE -eq 2) "failing test injects exit 2"
     Assert (("$errOut" -match 'node --test')) "injected output is the real npm run"
+
+    # Failing suite still present, but the turn only REPLAYS old edits in a blob:
+    # the hook must not run the tests at all.
+    "{`"transcript_path`":`"$(U $tBlob)`",`"cwd`":`"$(U $proj)`"}" | pwsh -NoProfile -File $testsHook 2>$null | Out-Null
+    Assert ($LASTEXITCODE -eq 0) "run-tests-on-stop ignores api-request-blob replays"
 } else {
     Write-Host "  skip (node/npm/git not available)" -ForegroundColor Yellow
 }

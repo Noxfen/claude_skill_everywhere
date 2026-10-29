@@ -52,6 +52,17 @@ The installer registers it only when `rea` is already installed — it never run
 npm install -g rea-agents
 ```
 
-On Windows the installer prefers a native `rea`; otherwise it uses a WSL install via
+Requires a recent Node (rea-agents 6.8 declares `^22.23.4 || ^24.22.1 || >=26.12.1`).
+
+On Windows the installer prefers a native `rea` (launched as `cmd /c rea mcp`, since npm
+global installs are `.cmd` shims); otherwise it uses a WSL install via
 `wsl.exe [-d <distro>] -- bash -lc "exec rea mcp"`. Set `CLAUDE_SKILL_REA_WSL_DISTRO`
-(e.g. `Ubuntu-24.04`) to pick the distro; unset = default WSL distro.
+(e.g. `Ubuntu-24.04`) to pick the distro; unset = default WSL distro. The WSL probe is a
+non-interactive login shell: `rea` must be on the **login** PATH — an nvm-only install
+(PATH set in `.bashrc` after its non-interactive early return) is not detected.
+
+> **What you are enabling.** rea is registered at `--scope user`, so its tools load in every
+> session of every project. Besides read-only analysis they include state-changing actions on
+> attached Android devices over ADB (install/uninstall packages, push files, start/stop apps)
+> and capture of local processes, Electron apps and browser sessions. If you only need it in
+> some projects: `claude mcp remove --scope user rea`, then add it with `--scope project` where wanted.

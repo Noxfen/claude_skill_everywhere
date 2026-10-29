@@ -90,15 +90,41 @@ echo "{\"transcript_path\":\"$(native "$FX/spaced.jsonl")\",\"cwd\":\"$ROOT_N\"}
 
 # Regression (Oct 2026): api-request-blob records replay the WHOLE history,
 # including old Edit tool_use blocks -- they must not count as current edits.
-cat > "$FX/blob.jsonl" <<'EOF'
-{"type":"user","message":{"content":"check for news, no edits"}}
-{"type":"api-request-blob","sessionId":"s","hash":"h","message":{"role":"assistant","content":[{"type":"tool_use","name":"Edit","input":{"file_path":"hooks/x.sh"}}]}}
-{"type":"assistant","message":{"content":[{"type":"text","text":"nothing changed"}]}}
-EOF
-echo "{\"transcript_path\":\"$(native "$FX/blob.jsonl")\",\"cwd\":\"$ROOT_N\"}" | bash "$DOCS" >/dev/null 2>&1; rc=$?
-[ "$rc" -eq 0 ]; assert $? "ignores tool_use replayed inside api-request-blob records"
-echo "{\"transcript_path\":\"$(native "$FX/blob.jsonl")\",\"cwd\":\"$ROOT_N\"}" | bash "$REPO_ROOT/hooks/installer-sync-reminder.sh" >/dev/null 2>&1; rc=$?
-[ "$rc" -eq 0 ]; assert $? "installer-sync-reminder also ignores api-request-blob replays"
+# Paths in these fixtures must be ABSOLUTE under the repo root, otherwise
+# installer-sync-reminder ignores them for an unrelated reason and the test
+# cannot fail.
+SYNC="$REPO_ROOT/hooks/installer-sync-reminder.sh"
+HOOK_P="$ROOT_N/hooks/x.sh"
+BLOB='{"type":"api-request-blob","sessionId":"s","hash":"h","message":{"role":"assistant","content":[{"type":"tool_use","name":"Edit","input":{"file_path":"__HOOK__"}}]}}'
+REAL='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"__HOOK__"}}]}}'
+fixture() {  # fixture <name> <line>...  -> writes $FX/<name>, __HOOK__ substituted
+  local name="$1"; shift
+  printf '%s\n' "$@" | sed "s|__HOOK__|$HOOK_P|g" > "$FX/$name"
+}
+stop_hook() {  # stop_hook <hook> <fixture-name> -> echoes exit code
+  echo "{\"transcript_path\":\"$(native "$FX/$2")\",\"cwd\":\"$ROOT_N\"}" | bash "$1" >/dev/null 2>&1
+  echo $?
+}
+
+fixture blob.jsonl '{"type":"user","message":{"content":"check for news, no edits"}}' "$BLOB" '{"type":"assistant","message":{"content":[{"type":"text","text":"nothing changed"}]}}'
+[ "$(stop_hook "$DOCS" blob.jsonl)" -eq 0 ]; assert $? "ignores tool_use replayed inside api-request-blob records"
+[ "$(stop_hook "$SYNC" blob.jsonl)" -eq 0 ]; assert $? "installer-sync-reminder ignores api-request-blob replays"
+
+fixture blob-real.jsonl '{"type":"user","message":{"content":"edit a hook"}}' "$BLOB" "$REAL"
+[ "$(stop_hook "$SYNC" blob-real.jsonl)" -eq 2 ]; assert $? "installer-sync-reminder fires on a real edit next to a blob (positive control)"
+[ "$(stop_hook "$DOCS" blob-real.jsonl)" -eq 2 ]; assert $? "update-docs fires on a real edit next to a blob"
+
+fixture meta.jsonl '{"type":"user","message":{"content":"edit a hook"}}' "$REAL" '{"type":"user","isMeta":true,"message":{"content":[{"type":"text","text":"Base directory for this skill: ..."}]}}'
+[ "$(stop_hook "$SYNC" meta.jsonl)" -eq 2 ]; assert $? "isMeta user records (Skill body) are not taken as the turn anchor"
+
+fixture trunc.jsonl '{"type":"user","message":{"content":"edit"}}' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit","inp' "$REAL"
+[ "$(stop_hook "$DOCS" trunc.jsonl)" -eq 2 ]; assert $? "a truncated line does not hide a later real edit"
+
+fixture nonobj.jsonl '{"type":"user","message":{"content":"edit"}}' '["not", "an", "object", "\"type\":\"user\""]' '{"type":"assistant","message":"plain string"}' "$REAL"
+[ "$(stop_hook "$DOCS" nonobj.jsonl)" -eq 2 ]; assert $? "non-object JSON lines and string messages do not abort the scan"
+
+fixture multi.jsonl '{"type":"user","message":{"content":"edit"}}' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"MultiEdit","input":{"file_path":"__HOOK__","edits":[]}}]}}'
+[ "$(stop_hook "$DOCS" multi.jsonl)" -eq 2 ]; assert $? "MultiEdit counts as an edit"
 
 # ------------------------------------------------------------- unsafe-rust
 echo "== unsafe-rust-blocker =="
@@ -153,6 +179,11 @@ if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1 && command 
   out=$(echo "{\"transcript_path\":\"$(native "$FX/cur.jsonl")\",\"cwd\":\"$PROJ_N\"}" | bash "$TESTS" 2>&1); rc=$?
   [ "$rc" -eq 2 ]; assert $? "failing test injects exit 2"
   echo "$out" | grep -q "node --test"; assert $? "injected output is the real npm run"
+
+  # Failing suite still present, but the turn only REPLAYS old edits in a blob:
+  # the hook must not run the tests at all.
+  echo "{\"transcript_path\":\"$(native "$FX/blob.jsonl")\",\"cwd\":\"$PROJ_N\"}" | bash "$TESTS" >/dev/null 2>&1; rc=$?
+  [ "$rc" -eq 0 ]; assert $? "run-tests-on-stop ignores api-request-blob replays"
 else
   echo "  skip (node/npm/git not available)"
 fi

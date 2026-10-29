@@ -58,9 +58,13 @@ if ($existingMcp -contains "rea") {
     Write-Host "[=] Already configured: rea" -ForegroundColor Yellow
 } else {
     $reaArgs = $null
+    # A registered distro must exist before probing: on Windows without WSL,
+    # wsl.exe is an inbox stub that can block ~60s on an "install WSL?" prompt.
+    $hasWslDistro = @(Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss" -ErrorAction SilentlyContinue).Count -gt 0
     if (Get-Command rea -ErrorAction SilentlyContinue) {
-        $reaCmd = "rea"; $reaArgs = @("mcp")
-    } elseif (Get-Command wsl.exe -ErrorAction SilentlyContinue) {
+        # npm global installs are .cmd shims on Windows: launch through cmd /c
+        $reaCmd = "cmd"; $reaArgs = @("/c", "rea", "mcp")
+    } elseif ($hasWslDistro -and (Get-Command wsl.exe -ErrorAction SilentlyContinue)) {
         $distroArgs = $env:CLAUDE_SKILL_REA_WSL_DISTRO ? @("-d", $env:CLAUDE_SKILL_REA_WSL_DISTRO) : @()
         wsl.exe @distroArgs -- bash -lc "command -v rea" *> $null
         if ($LASTEXITCODE -eq 0) {
