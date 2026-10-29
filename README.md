@@ -118,7 +118,7 @@ Install in Claude Code after running the installer:
 | `fetch` | `uvx --with 'mcp<2' mcp-server-fetch` | Fetch a URL and return its content (no method/body parameters) |
 | `github` | `npx @modelcontextprotocol/server-github` | Issues, PRs, branches (needs `GITHUB_PERSONAL_ACCESS_TOKEN`) |
 | `svelte` | HTTP `https://mcp.svelte.dev/mcp` | Official Svelte/SvelteKit docs + Svelte 5 runes |
-| `rea` | `rea mcp` (Windows: via WSL if not native) | Reverse engineering of binaries, apps, web bundles — registered only if `rea-agents` is installed |
+| `rea` | `rea mcp` (Windows: via WSL if not native) | Reverse engineering of binaries, apps, web bundles — registered only if `rea-agents` is installed; can act on ADB devices, see [mcp/README](mcp/README.md#rea-optional) |
 
 **GitHub MCP token** — set before starting Claude Code:
 ```powershell
