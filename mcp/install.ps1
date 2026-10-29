@@ -32,7 +32,15 @@ $Servers = @(
 )
 
 $claudeJson = Join-Path $env:USERPROFILE ".claude.json"
-$existingMcp = (Test-Path $claudeJson) ? ((Get-Content $claudeJson | ConvertFrom-Json).mcpServers?.PSObject.Properties.Name ?? @()) : @()
+# -AsHashtable: ~/.claude.json keys projects by path, and Windows paths that
+# differ only by drive-letter case ("D:/dev/x" vs "d:/dev/x") are routine.
+# Plain ConvertFrom-Json throws on such case-duplicate keys and aborted the
+# whole installer.
+$existingMcp = @()
+if (Test-Path $claudeJson) {
+    $cj = Get-Content $claudeJson -Raw | ConvertFrom-Json -AsHashtable
+    if ($cj -and $cj['mcpServers'] -is [System.Collections.IDictionary]) { $existingMcp = @($cj['mcpServers'].Keys) }
+}
 
 $failed = @()
 

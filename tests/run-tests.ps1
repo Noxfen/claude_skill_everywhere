@@ -54,6 +54,26 @@ Assert (@($j.hooks.Stop).Count -eq 4) "-Force twice does not grow Stop entries"
 
 Remove-Item Env:\CLAUDE_CONFIG_DIR
 
+# mcp/install.ps1 must survive ~/.claude.json project keys that differ only by
+# drive-letter case (plain ConvertFrom-Json throws on them). All servers are
+# pre-listed so the installer makes no `claude mcp add` call.
+if ((Get-Command node -ErrorAction SilentlyContinue) -and (Get-Command uv -ErrorAction SilentlyContinue)) {
+    $home2 = Join-Path $Fx "home"
+    New-Item -ItemType Directory -Force -Path $home2 | Out-Null
+    $srv = '{"type":"stdio","command":"x","args":[]}'
+    $cjBody = '{"projects":{"D:/dev/x":{},"d:/dev/x":{}},"mcpServers":{' +
+        ((@("filesystem","git","fetch","github","rea","svelte") | ForEach-Object { "`"$_`":$srv" }) -join ",") + '}}'
+    Set-Content (Join-Path $home2 ".claude.json") $cjBody -Encoding utf8
+    $savedProfile = $env:USERPROFILE
+    $env:USERPROFILE = $home2
+    pwsh -NoProfile -File (Join-Path $RepoRoot "mcp\install.ps1") *> $null
+    $mcpExit = $LASTEXITCODE
+    $env:USERPROFILE = $savedProfile
+    Assert ($mcpExit -eq 0) "mcp/install.ps1 survives case-duplicate keys in ~/.claude.json"
+} else {
+    Write-Host "  skip mcp/install.ps1 test (node/uv not available)" -ForegroundColor Yellow
+}
+
 # ---------------------------------------------------------- turn delimitation
 Write-Host "== turn delimitation (update-docs-reminder) =="
 $docsHook = Join-Path $RepoRoot "hooks\update-docs-reminder.ps1"
